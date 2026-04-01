@@ -13,6 +13,16 @@ export interface JobHistoryEntry {
   message: string;
 }
 
+export interface JobFailureDetails {
+  message: string;
+  name: string;
+  code: string | null;
+  command: string | null;
+  response: string | null;
+  responseCode: number | null;
+  stack: string | null;
+}
+
 export interface JobSmtpSnapshot {
   host: string;
   port: number;
@@ -53,6 +63,7 @@ export interface EmailJob {
   updatedAt: string;
   nextRunAt: string | null;
   lastError: string | null;
+  failureDetails: JobFailureDetails | null;
   history: JobHistoryEntry[];
   result: {
     providerMessageId: string;

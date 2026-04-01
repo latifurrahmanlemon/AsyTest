@@ -5,10 +5,12 @@ import { EmailJobProcessor } from './email-job.processor';
 import { StructuredLoggerService } from '../observability/structured-logger.service';
 import {
   EmailJob,
+  JobFailureDetails,
   JobHistoryEntry,
   JobStatus,
 } from './models/job.model';
 import { SmtpConfigService } from '../smtp/smtp-config.service';
+import { EmailDeliveryError } from '../smtp/smtp-mailer.service';
 
 @Injectable()
 export class JobQueueService implements OnModuleDestroy {
@@ -56,6 +58,7 @@ export class JobQueueService implements OnModuleDestroy {
       updatedAt: timestamp,
       nextRunAt: null,
       lastError: null,
+      failureDetails: null,
       history: [],
       result: null,
     };
@@ -150,6 +153,7 @@ export class JobQueueService implements OnModuleDestroy {
     this.updateJob(job, 'processing', {
       nextRunAt: null,
       lastError: null,
+      failureDetails: null,
     });
     this.appendHistory(job, {
       timestamp: new Date().toISOString(),
@@ -194,8 +198,26 @@ export class JobQueueService implements OnModuleDestroy {
         providerMessageId: result.providerMessageId,
       });
     } catch (error) {
-      const message = this.getErrorMessage(error);
+      const failureDetails = this.getErrorDetails(error);
+      const message = failureDetails.message;
       job.lastError = message;
+      job.failureDetails = failureDetails;
+
+      this.logger.error('job.processing.attempt_failed', {
+        jobId: job.id,
+        jobType: job.type,
+        attempt: job.attemptsMade,
+        maxAttempts: job.maxAttempts,
+        recipient: job.payload.to,
+        smtp: this.getSmtpSnapshot(job),
+        errorMessage: failureDetails.message,
+        errorName: failureDetails.name,
+        errorCode: failureDetails.code,
+        smtpCommand: failureDetails.command,
+        smtpResponse: failureDetails.response,
+        smtpResponseCode: failureDetails.responseCode,
+        stack: failureDetails.stack,
+      });
 
       if (job.attemptsMade < job.maxAttempts) {
         const delayMs = this.calculateBackoffDelay(job.attemptsMade);
@@ -210,7 +232,7 @@ export class JobQueueService implements OnModuleDestroy {
           status: 'retry_scheduled',
           event: 'job.processing.retry_scheduled',
           attempt: job.attemptsMade,
-          message: `Attempt ${job.attemptsMade} failed. Retry ${job.attemptsMade + 1} scheduled in ${delayMs}ms`,
+          message: `Attempt ${job.attemptsMade} failed: ${message}. Retry ${job.attemptsMade + 1} scheduled in ${delayMs}ms`,
         });
 
         this.logger.warn('job.processing.retry_scheduled', {
@@ -221,7 +243,12 @@ export class JobQueueService implements OnModuleDestroy {
           maxAttempts: job.maxAttempts,
           retryDelayMs: delayMs,
           nextRunAt,
-          error: message,
+          errorMessage: failureDetails.message,
+          errorName: failureDetails.name,
+          errorCode: failureDetails.code,
+          smtpCommand: failureDetails.command,
+          smtpResponse: failureDetails.response,
+          smtpResponseCode: failureDetails.responseCode,
         });
 
         const timer = setTimeout(() => {
@@ -253,13 +280,14 @@ export class JobQueueService implements OnModuleDestroy {
       this.updateJob(job, 'failed', {
         nextRunAt: null,
         lastError: message,
+        failureDetails,
       });
       this.appendHistory(job, {
         timestamp: new Date().toISOString(),
         status: 'failed',
         event: 'job.processing.failed',
         attempt: job.attemptsMade,
-        message: `Job failed permanently after ${job.attemptsMade} attempts`,
+        message: `Job failed permanently after ${job.attemptsMade} attempts. Last error: ${message}`,
       });
 
       this.logger.error('job.processing.failed', {
@@ -268,7 +296,14 @@ export class JobQueueService implements OnModuleDestroy {
         attempt: job.attemptsMade,
         maxAttempts: job.maxAttempts,
         recipient: job.payload.to,
-        error: message,
+        smtp: this.getSmtpSnapshot(job),
+        errorMessage: failureDetails.message,
+        errorName: failureDetails.name,
+        errorCode: failureDetails.code,
+        smtpCommand: failureDetails.command,
+        smtpResponse: failureDetails.response,
+        smtpResponseCode: failureDetails.responseCode,
+        stack: failureDetails.stack,
       });
     }
   }
@@ -288,12 +323,36 @@ export class JobQueueService implements OnModuleDestroy {
     return this.retryBaseDelayMs * 2 ** (attempt - 1);
   }
 
-  private getErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
+  private getErrorDetails(error: unknown): JobFailureDetails {
+    if (error instanceof EmailDeliveryError) {
+      return { ...error.details };
     }
 
-    return 'Unknown job processing error';
+    if (error instanceof Error) {
+      const genericError = error as Error & {
+        code?: string;
+      };
+
+      return {
+        message: error.message,
+        name: error.name,
+        code: genericError.code ?? null,
+        command: null,
+        response: null,
+        responseCode: null,
+        stack: error.stack ?? null,
+      };
+    }
+
+    return {
+      message: 'Unknown job processing error',
+      name: 'UnknownError',
+      code: null,
+      command: null,
+      response: null,
+      responseCode: null,
+      stack: null,
+    };
   }
 
   private readPositiveInteger(
@@ -346,7 +405,15 @@ export class JobQueueService implements OnModuleDestroy {
           : undefined,
       },
       history: job.history.map((entry) => ({ ...entry })),
-      result: job.result ? { ...job.result } : null,
+      failureDetails: job.failureDetails ? { ...job.failureDetails } : null,
+      result: job.result
+        ? {
+            ...job.result,
+            accepted: [...job.result.accepted],
+            rejected: [...job.result.rejected],
+            smtp: { ...job.result.smtp },
+          }
+        : null,
     };
   }
 }

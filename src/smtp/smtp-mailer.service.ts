@@ -9,6 +9,23 @@ interface SendMailInput {
   body: string;
 }
 
+export interface EmailDeliveryFailureDetails {
+  message: string;
+  name: string;
+  code: string | null;
+  command: string | null;
+  response: string | null;
+  responseCode: number | null;
+  stack: string | null;
+}
+
+export class EmailDeliveryError extends Error {
+  constructor(public readonly details: EmailDeliveryFailureDetails) {
+    super(details.message);
+    this.name = 'EmailDeliveryError';
+  }
+}
+
 @Injectable()
 export class SmtpMailerService {
   async verifyConnection(config: SmtpConfig): Promise<void> {
@@ -27,14 +44,20 @@ export class SmtpMailerService {
   }> {
     const transporter = nodemailer.createTransport(this.buildTransport(config));
 
-    const info = await transporter.sendMail({
-      from: config.fromName
-        ? `"${config.fromName}" <${config.fromEmail}>`
-        : config.fromEmail,
-      to: payload.to,
-      subject: payload.subject,
-      text: payload.body,
-    });
+    let info: nodemailer.SentMessageInfo;
+
+    try {
+      info = await transporter.sendMail({
+        from: config.fromName
+          ? `"${config.fromName}" <${config.fromEmail}>`
+          : config.fromEmail,
+        to: payload.to,
+        subject: payload.subject,
+        text: payload.body,
+      });
+    } catch (error) {
+      throw new EmailDeliveryError(this.extractFailureDetails(error));
+    }
 
     return {
       messageId: info.messageId,
@@ -55,6 +78,37 @@ export class SmtpMailerService {
             pass: config.password,
           }
         : undefined,
+    };
+  }
+
+  private extractFailureDetails(error: unknown): EmailDeliveryFailureDetails {
+    if (error instanceof Error) {
+      const smtpError = error as Error & {
+        code?: string;
+        command?: string;
+        response?: string;
+        responseCode?: number;
+      };
+
+      return {
+        message: error.message,
+        name: error.name,
+        code: smtpError.code ?? null,
+        command: smtpError.command ?? null,
+        response: smtpError.response ?? null,
+        responseCode: smtpError.responseCode ?? null,
+        stack: error.stack ?? null,
+      };
+    }
+
+    return {
+      message: 'Unknown SMTP delivery error',
+      name: 'UnknownError',
+      code: null,
+      command: null,
+      response: null,
+      responseCode: null,
+      stack: null,
     };
   }
 }
