@@ -8,30 +8,30 @@ export const uiPage = String.raw`<!doctype html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#f5eee3;--panel:rgba(255,251,246,.82);--line:rgba(87,70,50,.12);--text:#231f1a;--muted:#6c6258;--brand:#d86d3d;--brand2:#127a6d;--ok:#1f7a49;--warn:#a86a13;--bad:#b13a3a;--shadow:0 18px 50px rgba(82,58,40,.12)}
+    :root{--bg:#e7f3eb;--panel:rgba(248,253,249,.86);--line:rgba(48,84,64,.12);--text:#163126;--muted:#587161;--brand:#2f8f5b;--brand2:#176b45;--ok:#1f7a49;--warn:#9c6a12;--bad:#b13a3a;--shadow:0 18px 50px rgba(35,76,55,.12)}
     *{box-sizing:border-box}body{margin:0;font-family:'Manrope',sans-serif;color:var(--text);background:
-      radial-gradient(circle at top left,rgba(216,109,61,.22),transparent 28%),
-      radial-gradient(circle at top right,rgba(18,122,109,.18),transparent 26%),
-      linear-gradient(180deg,#faf4ec 0,#f2e7d8 100%)}
+      radial-gradient(circle at top left,rgba(47,143,91,.24),transparent 28%),
+      radial-gradient(circle at top right,rgba(23,107,69,.18),transparent 26%),
+      linear-gradient(180deg,#f4fbf6 0,#dbeedf 100%)}
     .wrap{width:min(1360px,calc(100% - 24px));margin:18px auto 28px;display:grid;gap:16px}
     .hero,.panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px)}
     .hero{padding:24px}.heroTop,.head,.row,.itemTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
     .eyebrow,.chip,.badge{display:inline-flex;align-items:center;border-radius:999px;font-weight:800}
-    .eyebrow{padding:8px 12px;background:rgba(216,109,61,.12);color:#9b401c;font-size:12px;letter-spacing:.11em;text-transform:uppercase}
+    .eyebrow{padding:8px 12px;background:rgba(47,143,91,.12);color:var(--brand2);font-size:12px;letter-spacing:.11em;text-transform:uppercase}
     h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0}h1{font-size:clamp(24px,3.2vw,54px);line-height:1;max-width:none;margin-top:12px;white-space:nowrap}
     p,.meta,small{color:var(--muted)}p{line-height:1.65}.chip{padding:10px 14px;background:rgba(177,58,58,.12);color:var(--bad);font-size:13px}
     .stats,.grid,.details{display:grid;gap:16px}.stats{grid-template-columns:repeat(6,1fr)}.grid{grid-template-columns:1.05fr .95fr}.details{grid-template-columns:.92fr 1.08fr}
     .stat,.card,.item,.log,.timelineItem{background:rgba(255,255,255,.65);border:1px solid rgba(87,70,50,.08);border-radius:18px}
     .stat{padding:16px}.stat span,.labelMini span{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}.stat strong{font-size:30px;font-family:'Space Grotesk',sans-serif}
     .panel{padding:22px}.head p{margin:6px 0 0;font-size:14px}.stack{display:grid;gap:12px}.two{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}input,textarea{width:100%;border:1px solid rgba(87,70,50,.14);border-radius:14px;padding:13px 14px;font:inherit;background:rgba(255,255,255,.88);color:var(--text)}
-    textarea{min-height:140px;resize:vertical}input:focus,textarea:focus{outline:none;border-color:rgba(216,109,61,.7);box-shadow:0 0 0 4px rgba(216,109,61,.12)}
+    label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}input,textarea{width:100%;border:1px solid rgba(48,84,64,.14);border-radius:14px;padding:13px 14px;font:inherit;background:rgba(255,255,255,.9);color:var(--text)}
+    textarea{min-height:140px;resize:vertical}input:focus,textarea:focus{outline:none;border-color:rgba(47,143,91,.7);box-shadow:0 0 0 4px rgba(47,143,91,.12)}
     .check{display:flex;align-items:center;gap:10px;color:var(--text)}.check input{width:18px;height:18px}.actions{display:flex;gap:10px;flex-wrap:wrap}
-    button{border:none;border-radius:16px;padding:13px 16px;font:inherit;font-weight:800;cursor:pointer}.primary{background:linear-gradient(135deg,var(--brand),#ee9a5d);color:#fff}.secondary{background:rgba(255,255,255,.78);color:var(--text);border:1px solid rgba(87,70,50,.12)}
+    button{border:none;border-radius:16px;padding:13px 16px;font:inherit;font-weight:800;cursor:pointer}.primary{background:linear-gradient(135deg,var(--brand),#5cbf83);color:#fff}.secondary{background:rgba(255,255,255,.8);color:var(--text);border:1px solid rgba(48,84,64,.12)}
     .toast{display:none;padding:12px 14px;border-radius:16px;font-weight:700}.toast.show{display:block}.toast.ok{background:rgba(31,122,73,.12);color:var(--ok)}.toast.err{background:rgba(177,58,58,.12);color:var(--bad)}
     .hint{font-size:13px;color:var(--muted)}.state,.list,.logs,.timeline{display:grid;gap:10px}.list,.logs,.timeline{max-height:560px;overflow:auto;padding-right:4px}
-    .item,.log,.timelineItem,.state{padding:15px}.item{cursor:pointer;transition:.18s transform,.18s border-color}.item:hover,.item.active{transform:translateY(-1px);border-color:rgba(216,109,61,.35);background:rgba(255,250,245,.92)}
-    .badge{padding:7px 10px;font-size:12px;text-transform:capitalize}.queued{background:rgba(216,109,61,.12);color:#9b401c}.processing{background:rgba(54,100,198,.12);color:#2c55b9}.retry_scheduled,.warn{background:rgba(168,106,19,.14);color:var(--warn)}.succeeded,.info{background:rgba(31,122,73,.12);color:var(--ok)}.failed,.error{background:rgba(177,58,58,.12);color:var(--bad)}
+    .item,.log,.timelineItem,.state{padding:15px}.item{cursor:pointer;transition:.18s transform,.18s border-color}.item:hover,.item.active{transform:translateY(-1px);border-color:rgba(47,143,91,.35);background:rgba(244,251,246,.94)}
+    .badge{padding:7px 10px;font-size:12px;text-transform:capitalize}.queued{background:rgba(47,143,91,.12);color:var(--brand2)}.processing{background:rgba(37,120,92,.14);color:#1f6b50}.retry_scheduled,.warn{background:rgba(168,106,19,.14);color:var(--warn)}.succeeded,.info{background:rgba(31,122,73,.12);color:var(--ok)}.failed,.error{background:rgba(177,58,58,.12);color:var(--bad)}
     .metaGrid,.mini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px;margin-top:12px}.labelMini strong,.mono{word-break:break-word}.mono{font-family:Consolas,monospace}
     .empty{padding:22px;border:1px dashed rgba(87,70,50,.18);border-radius:18px;text-align:center;color:var(--muted)}
     @media (max-width:1100px){.stats,.grid,.details{grid-template-columns:1fr}h1{font-size:clamp(20px,4vw,40px)}}@media (max-width:720px){.wrap{width:min(100% - 14px,100%);margin:12px auto 18px}.hero,.panel{padding:18px;border-radius:18px}.two,.metaGrid,.mini,.stats{grid-template-columns:1fr}h1{white-space:normal}}
@@ -44,7 +44,7 @@ export const uiPage = String.raw`<!doctype html>
       <div>
         <div class="eyebrow">Async Email Control Room</div>
         <h1>Dynamic SMTP, async email jobs, live history.</h1>
-        <p>SMTP config set করুন, real test email queue করুন, retry observe করুন, আর per-job history ও structured logs inspect করুন.</p>
+        <p>Configure SMTP, queue real test emails, monitor retries, and review per-job history with structured logs.</p>
       </div>
     </div>
     <div class="stats">
@@ -94,7 +94,7 @@ export const uiPage = String.raw`<!doctype html>
           <label>Simulated Fail Attempts<input name="failAttempts" type="number" min="0" max="10" placeholder="0"></label>
           <label>Processing Delay (ms)<input name="processingDelayMs" type="number" min="0" max="30000" placeholder="0"></label>
         </div>
-        <div class="hint">Simulation inputs optional. এগুলো retry flow দেখাতে useful.</div>
+        <div class="hint">Simulation inputs are optional and useful for demonstrating retry behavior.</div>
         <div class="actions">
           <button class="primary" type="submit" id="queueMail">Queue Email Job</button>
           <button class="secondary" type="button" id="refreshBtn">Refresh</button>
