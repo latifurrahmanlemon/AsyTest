@@ -18,7 +18,7 @@ export const uiPage = String.raw`<!doctype html>
     .hero{padding:24px}.heroTop,.head,.row,.itemTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
     .eyebrow,.chip,.badge{display:inline-flex;align-items:center;border-radius:999px;font-weight:800}
     .eyebrow{padding:8px 12px;background:rgba(216,109,61,.12);color:#9b401c;font-size:12px;letter-spacing:.11em;text-transform:uppercase}
-    h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0}h1{font-size:clamp(32px,4vw,54px);line-height:.95;max-width:11ch;margin-top:12px}
+    h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0}h1{font-size:clamp(24px,3.2vw,54px);line-height:1;max-width:none;margin-top:12px;white-space:nowrap}
     p,.meta,small{color:var(--muted)}p{line-height:1.65}.chip{padding:10px 14px;background:rgba(177,58,58,.12);color:var(--bad);font-size:13px}
     .stats,.grid,.details{display:grid;gap:16px}.stats{grid-template-columns:repeat(6,1fr)}.grid{grid-template-columns:1.05fr .95fr}.details{grid-template-columns:.92fr 1.08fr}
     .stat,.card,.item,.log,.timelineItem{background:rgba(255,255,255,.65);border:1px solid rgba(87,70,50,.08);border-radius:18px}
@@ -34,7 +34,7 @@ export const uiPage = String.raw`<!doctype html>
     .badge{padding:7px 10px;font-size:12px;text-transform:capitalize}.queued{background:rgba(216,109,61,.12);color:#9b401c}.processing{background:rgba(54,100,198,.12);color:#2c55b9}.retry_scheduled,.warn{background:rgba(168,106,19,.14);color:var(--warn)}.succeeded,.info{background:rgba(31,122,73,.12);color:var(--ok)}.failed,.error{background:rgba(177,58,58,.12);color:var(--bad)}
     .metaGrid,.mini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px;margin-top:12px}.labelMini strong,.mono{word-break:break-word}.mono{font-family:Consolas,monospace}
     .empty{padding:22px;border:1px dashed rgba(87,70,50,.18);border-radius:18px;text-align:center;color:var(--muted)}
-    @media (max-width:1100px){.stats,.grid,.details{grid-template-columns:1fr}}@media (max-width:720px){.wrap{width:min(100% - 14px,100%);margin:12px auto 18px}.hero,.panel{padding:18px;border-radius:18px}.two,.metaGrid,.mini,.stats{grid-template-columns:1fr}}
+    @media (max-width:1100px){.stats,.grid,.details{grid-template-columns:1fr}h1{font-size:clamp(20px,4vw,40px)}}@media (max-width:720px){.wrap{width:min(100% - 14px,100%);margin:12px auto 18px}.hero,.panel{padding:18px;border-radius:18px}.two,.metaGrid,.mini,.stats{grid-template-columns:1fr}h1{white-space:normal}}
   </style>
 </head>
 <body>
@@ -46,7 +46,6 @@ export const uiPage = String.raw`<!doctype html>
         <h1>Dynamic SMTP, async email jobs, live history.</h1>
         <p>SMTP config set করুন, real test email queue করুন, retry observe করুন, আর per-job history ও structured logs inspect করুন.</p>
       </div>
-      <div class="chip" id="cfgChip">SMTP not configured</div>
     </div>
     <div class="stats">
       <div class="stat"><span>Total</span><strong id="sTotal">0</strong></div>
@@ -60,7 +59,7 @@ export const uiPage = String.raw`<!doctype html>
 
   <section class="grid">
     <section class="panel">
-      <div class="head"><div><h2>SMTP Configuration</h2><p>Dynamic SMTP save/update/test.</p></div></div>
+      <div class="head"><div><h2>SMTP Configuration</h2><p>Dynamic SMTP save/update/test.</p></div><div class="chip" id="cfgChip">SMTP not configured</div></div>
       <div id="smtpToast" class="toast"></div>
       <form id="smtpForm" class="stack">
         <div class="two">
