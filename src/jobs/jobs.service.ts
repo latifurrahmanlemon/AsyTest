@@ -25,6 +25,10 @@ export class JobsService {
     return job;
   }
 
+  retryJob(jobId: string): EmailJob {
+    return this.jobQueueService.retryJob(jobId);
+  }
+
   getSummary(): {
     total: number;
     queued: number;

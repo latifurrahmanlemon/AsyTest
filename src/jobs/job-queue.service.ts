@@ -1,4 +1,9 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CreateEmailJobDto } from './dto/create-email-job.dto';
 import { EmailJobProcessor } from './email-job.processor';
@@ -95,6 +100,56 @@ export class JobQueueService implements OnModuleDestroy {
   getJob(jobId: string): EmailJob | undefined {
     const job = this.jobs.get(jobId);
     return job ? this.cloneJob(job) : undefined;
+  }
+
+  retryJob(jobId: string): EmailJob {
+    const job = this.jobs.get(jobId);
+
+    if (!job) {
+      throw new NotFoundException(`Job ${jobId} was not found`);
+    }
+
+    if (job.status !== 'failed') {
+      throw new BadRequestException(
+        `Only failed jobs can be retried. Current status: ${job.status}`,
+      );
+    }
+
+    const timestamp = new Date().toISOString();
+    const smtpConfig = this.smtpConfigService.getConfigOrThrow();
+
+    job.payload = {
+      ...job.payload,
+      smtp: smtpConfig,
+    };
+    job.attemptsMade = 0;
+    job.result = null;
+
+    this.updateJob(job, 'queued', {
+      nextRunAt: null,
+      lastError: null,
+      failureDetails: null,
+    });
+    this.appendHistory(job, {
+      timestamp,
+      status: 'queued',
+      event: 'job.retry_requested',
+      attempt: 0,
+      message: `Manual retry requested. Job requeued with current SMTP settings for ${job.payload.to}`,
+    });
+
+    this.queue.push(job.id);
+
+    this.logger.info('job.retry_requested', {
+      jobId: job.id,
+      jobType: job.type,
+      recipient: job.payload.to,
+      maxAttempts: job.maxAttempts,
+      smtp: this.getSmtpSnapshot(job),
+    });
+
+    void this.pumpQueue();
+    return this.cloneJob(job);
   }
 
   getSummary(): {

@@ -21,6 +21,12 @@ export class JobsController {
     return this.jobsService.createEmailJob(payload);
   }
 
+  @Post(':jobId/retry')
+  @HttpCode(HttpStatus.ACCEPTED)
+  retryJob(@Param('jobId') jobId: string): EmailJob {
+    return this.jobsService.retryJob(jobId);
+  }
+
   @Get('summary')
   getSummary(): {
     total: number;
