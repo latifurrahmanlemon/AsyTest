@@ -26,7 +26,7 @@ export const uiPage = String.raw`<!doctype html>
     .panel{padding:22px}.head p{margin:6px 0 0;font-size:14px}.stack{display:grid;gap:12px}.two{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
     label{display:grid;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}input,textarea{width:100%;border:1px solid rgba(48,84,64,.14);border-radius:14px;padding:13px 14px;font:inherit;background:rgba(255,255,255,.9);color:var(--text)}
     textarea{min-height:140px;resize:vertical}input:focus,textarea:focus{outline:none;border-color:rgba(47,143,91,.7);box-shadow:0 0 0 4px rgba(47,143,91,.12)}
-    .check{display:flex;align-items:center;gap:10px;color:var(--text)}.check input{width:18px;height:18px}.actions{display:flex;gap:10px;flex-wrap:wrap}
+    .check{display:flex;align-items:center;gap:10px;color:var(--text)}.check input{width:18px;height:18px}.modeRow{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.modeCard{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border:1px solid rgba(48,84,64,.14);border-radius:16px;background:rgba(255,255,255,.82)}.modeCard input{margin-top:2px;width:18px;height:18px}.modeCard strong{display:block}.modeCard span{display:block;margin-top:4px;font-size:12px;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap}
     button{border:none;border-radius:16px;padding:13px 16px;font:inherit;font-weight:800;cursor:pointer}.primary{background:linear-gradient(135deg,var(--brand),#5cbf83);color:#fff}.secondary{background:rgba(255,255,255,.8);color:var(--text);border:1px solid rgba(48,84,64,.12)}
     .toast{display:none;padding:12px 14px;border-radius:16px;font-weight:700}.toast.show{display:block}.toast.ok{background:rgba(31,122,73,.12);color:var(--ok)}.toast.err{background:rgba(177,58,58,.12);color:var(--bad)}
     .hint{font-size:13px;color:var(--muted)}.state,.logs,.timeline{display:grid;gap:10px}.logs,.timeline{max-height:560px;overflow:auto;padding-right:4px}
@@ -38,7 +38,7 @@ export const uiPage = String.raw`<!doctype html>
     .metaGrid,.mini{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px;margin-top:12px}.labelMini strong,.mono{word-break:break-word}.mono{font-family:Consolas,monospace}
     .bodyBox,.detailBlock{margin-top:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(48,84,64,.1)}.bodyBox{white-space:pre-wrap}
     .empty{padding:22px;border:1px dashed rgba(87,70,50,.18);border-radius:18px;text-align:center;color:var(--muted)}
-    @media (max-width:1100px){.stats,.grid,.details{grid-template-columns:1fr}h1{font-size:clamp(20px,4vw,40px)}}@media (max-width:720px){.wrap{width:min(100% - 14px,100%);margin:12px auto 18px}.hero,.panel{padding:18px;border-radius:18px}.two,.metaGrid,.mini,.stats{grid-template-columns:1fr}h1{white-space:normal}}
+    @media (max-width:1100px){.stats,.grid,.details{grid-template-columns:1fr}h1{font-size:clamp(20px,4vw,40px)}}@media (max-width:720px){.wrap{width:min(100% - 14px,100%);margin:12px auto 18px}.hero,.panel{padding:18px;border-radius:18px}.two,.metaGrid,.mini,.stats,.modeRow{grid-template-columns:1fr}h1{white-space:normal}}
   </style>
 </head>
 <body>
@@ -94,11 +94,27 @@ export const uiPage = String.raw`<!doctype html>
         <label>Recipient<input name="to" type="email" placeholder="new-email@example.com" required></label>
         <label>Subject<input name="subject" placeholder="Test subject" required></label>
         <label>Body<textarea name="body" placeholder="Write your message..." required></textarea></label>
+        <div class="modeRow">
+          <label class="modeCard">
+            <input name="attemptMode" type="radio" value="real" checked>
+            <span>
+              <strong>Real Attempt</strong>
+              <span>Uses your saved SMTP and sends the email for real.</span>
+            </span>
+          </label>
+          <label class="modeCard">
+            <input name="attemptMode" type="radio" value="simulated">
+            <span>
+              <strong>Simulated Attempt</strong>
+              <span>Intentionally fails the chosen number of attempts before a real send.</span>
+            </span>
+          </label>
+        </div>
         <div class="two">
           <label>Simulated Fail Attempts<input name="failAttempts" type="number" min="0" max="10" placeholder="0"></label>
           <label>Processing Delay (ms)<input name="processingDelayMs" type="number" min="0" max="30000" placeholder="0"></label>
         </div>
-        <div class="hint">Simulation inputs are optional and useful for demonstrating retry behavior.</div>
+        <div class="hint" id="modeHint">Real Attempt is selected. The app will send through your actual SMTP server. Switch to Simulated Attempt only if you want to test retry behavior.</div>
         <div class="actions">
           <button class="primary" type="submit" id="queueMail">Queue Email Job</button>
           <button class="secondary" type="button" id="refreshBtn">Refresh</button>
@@ -139,6 +155,7 @@ const toast=(node,kind,msg)=>{node.className='toast show '+kind;node.textContent
 const loading=(btn,flag,label)=>{btn.disabled=flag;btn.textContent=flag?'Working...':label;};
 const badge=s=>'<span class="badge '+s+'">'+esc(String(s).replaceAll('_',' '))+'</span>';
 async function api(path,opt={}){const res=await fetch(path,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});if(!res.ok){let m='Request failed';try{const b=await res.json();m=Array.isArray(b.message)?b.message.join(', '):(b.message||m);}catch{}throw new Error(m);}return res.status===204?null:res.json();}
+function syncAttemptMode(){const mode=E.mailForm.querySelector('input[name="attemptMode"]:checked')?.value||'real';const simulated=mode==='simulated';E.mailForm.failAttempts.disabled=!simulated;E.mailForm.processingDelayMs.disabled=!simulated;if(!simulated){E.mailForm.failAttempts.value='';E.mailForm.processingDelayMs.value='';}el('modeHint').textContent=simulated?'Simulated Attempt is selected. The app will intentionally fail the configured attempts first, then continue with the real SMTP send once the simulation count is exhausted.':'Real Attempt is selected. The app will send through your actual SMTP server. Switch to Simulated Attempt only if you want to test retry behavior.';}
 function renderSummary(){const s=state.summary||{total:0,queued:0,processing:0,retryScheduled:0,succeeded:0,failed:0};el('sTotal').textContent=s.total;el('sQueued').textContent=s.queued;el('sProcessing').textContent=s.processing;el('sRetry').textContent=s.retryScheduled;el('sSuccess').textContent=s.succeeded;el('sFailed').textContent=s.failed;}
 function hydrateSmtp(){const s=state.smtp;if(!s||!s.isConfigured)return;E.smtpForm.host.value=s.host||'';E.smtpForm.port.value=s.port||'';E.smtpForm.secure.checked=!!s.secure;E.smtpForm.username.value=s.username||'';E.smtpForm.password.value='';E.smtpForm.fromEmail.value=s.fromEmail||'';E.smtpForm.fromName.value=s.fromName||'';}
 function renderSmtp(){const s=state.smtp;if(!s||!s.isConfigured){el('cfgChip').textContent='SMTP not configured';el('cfgChip').style.background='rgba(177,58,58,.12)';el('cfgChip').style.color='var(--bad)';el('smtpState').innerHTML='<strong>Current state</strong><p class="meta">No SMTP config saved yet.</p>';return;}el('cfgChip').textContent='SMTP ready';el('cfgChip').style.background='rgba(18,122,109,.12)';el('cfgChip').style.color='var(--brand2)';el('smtpState').innerHTML='<strong>Current state</strong><div class="metaGrid"><div class="labelMini"><span>Host</span><strong>'+esc(s.host)+'</strong></div><div class="labelMini"><span>Port</span><strong>'+esc(s.port)+'</strong></div><div class="labelMini"><span>Secure</span><strong>'+esc(s.secure?'Yes':'No')+'</strong></div><div class="labelMini"><span>Username</span><strong>'+esc(s.username||'None')+'</strong></div><div class="labelMini"><span>From</span><strong>'+esc(s.fromEmail)+'</strong></div><div class="labelMini"><span>Updated</span><strong>'+esc(fmt(s.updatedAt))+'</strong></div></div>';}
@@ -150,8 +167,10 @@ async function refresh(populate=true){const [smtp,summary,jobs,logs]=await Promi
 function smtpPayload(){return{host:E.smtpForm.host.value.trim(),port:Number(E.smtpForm.port.value),secure:E.smtpForm.secure.checked,username:E.smtpForm.username.value.trim()||undefined,password:E.smtpForm.password.value||undefined,fromEmail:E.smtpForm.fromEmail.value.trim(),fromName:E.smtpForm.fromName.value.trim()||undefined};}
 E.smtpForm.addEventListener('submit',async e=>{e.preventDefault();loading(E.saveSmtp,true,'Save SMTP');try{await api('/smtp-config',{method:'PUT',body:JSON.stringify(smtpPayload())});toast(E.smtpToast,'ok','SMTP configuration saved.');await refresh();}catch(err){toast(E.smtpToast,'err',err.message)}finally{loading(E.saveSmtp,false,'Save SMTP');}});
 E.testSmtp.addEventListener('click',async()=>{loading(E.testSmtp,true,'Test Connection');try{await api('/smtp-config/test',{method:'POST',body:JSON.stringify(smtpPayload())});toast(E.smtpToast,'ok','SMTP connection verified.');await refresh();}catch(err){toast(E.smtpToast,'err',err.message)}finally{loading(E.testSmtp,false,'Test Connection');}});
-E.mailForm.addEventListener('submit',async e=>{e.preventDefault();loading(E.queueMail,true,'Queue Email Job');const payload={to:E.mailForm.to.value.trim(),subject:E.mailForm.subject.value.trim(),body:E.mailForm.body.value.trim()};const fail=E.mailForm.failAttempts.value,delay=E.mailForm.processingDelayMs.value;if(fail||delay){payload.simulate={};if(fail)payload.simulate.failAttempts=Number(fail);if(delay)payload.simulate.processingDelayMs=Number(delay);}try{const job=await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});toast(E.mailToast,'ok','Email job accepted into queue.');E.mailForm.subject.value='';E.mailForm.body.value='';E.mailForm.failAttempts.value='';E.mailForm.processingDelayMs.value='';state.selectedJobId=job.id;await refresh(false);}catch(err){toast(E.mailToast,'err',err.message)}finally{loading(E.queueMail,false,'Queue Email Job');}});
+E.mailForm.addEventListener('submit',async e=>{e.preventDefault();loading(E.queueMail,true,'Queue Email Job');const payload={to:E.mailForm.to.value.trim(),subject:E.mailForm.subject.value.trim(),body:E.mailForm.body.value.trim()};const mode=E.mailForm.querySelector('input[name="attemptMode"]:checked')?.value||'real';const fail=E.mailForm.failAttempts.value,delay=E.mailForm.processingDelayMs.value;if(mode==='simulated'&&(fail||delay)){payload.simulate={};if(fail)payload.simulate.failAttempts=Number(fail);if(delay)payload.simulate.processingDelayMs=Number(delay);}try{const job=await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});toast(E.mailToast,'ok',mode==='simulated'?'Simulated email job accepted into queue.':'Real email job accepted into queue.');E.mailForm.subject.value='';E.mailForm.body.value='';E.mailForm.failAttempts.value='';E.mailForm.processingDelayMs.value='';E.mailForm.querySelector('input[value="real"]').checked=true;syncAttemptMode();state.selectedJobId=job.id;await refresh(false);}catch(err){toast(E.mailToast,'err',err.message)}finally{loading(E.queueMail,false,'Queue Email Job');}});
 E.refreshBtn.addEventListener('click',()=>refresh(false).catch(err=>toast(E.mailToast,'err',err.message)));
+E.mailForm.querySelectorAll('input[name="attemptMode"]').forEach(node=>node.addEventListener('change',syncAttemptMode));
+syncAttemptMode();
 refresh().catch(err=>toast(E.mailToast,'err',err.message));setInterval(()=>refresh(false).catch(()=>{}),3000);
 </script>
 </body>
