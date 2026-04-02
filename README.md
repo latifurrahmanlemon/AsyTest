@@ -1,301 +1,211 @@
-# Async Email Control Room
+# Async Email Control Room API
 
-A production-minded NestJS project for testing async email sending with:
+A production-minded NestJS backend with:
 
-- dynamic SMTP configuration
-- a built-in browser UI
-- async job queue processing
-- 3 total attempts with exponential backoff
-- structured logs
-- per-job history and delivery tracking
-- unit and e2e tests
+- PostgreSQL or MySQL support from the same entity model
+- Redis + BullMQ for reliable async email jobs
+- tenant isolation
+- signup, login, forgot password, reset password
+- admin and user roles
+- tenant-scoped user management
+- tenant-scoped SMTP configuration
+- persistent audit logs, email jobs, and job histories
 
-The queue and all history stay in memory, so the setup remains simple while still showing a clean real backend flow.
+## Architecture
 
-## Features
+This version moves the project away from in-memory state and into a multi-tenant backend shape:
 
-- `GET /` serves a clean single-page UI for:
-  - saving SMTP settings dynamically
-  - testing SMTP connectivity
-  - queueing a real email
-  - watching job status change live
-  - inspecting per-job timeline and logs
-- `POST /jobs/email` accepts async email jobs
-- retries happen automatically with exponential backoff
-- final failures are logged clearly and marked as `failed`
-- SMTP password is never returned by the API
-- each job stores:
-  - current status
-  - attempts made
-  - last error
-  - status transition history
-  - SMTP snapshot used for that job
-  - provider response metadata
+- `Tenant`
+  - logical isolation boundary
+- `User`
+  - belongs to a tenant
+  - role is `admin` or `user`
+- `SMTP Config`
+  - one config per tenant
+  - password stored encrypted
+- `Email Job`
+  - belongs to a tenant
+  - belongs to the creating user
+  - processed through Redis queue
+- `Email Job History`
+  - stores lifecycle events per job
+- `Audit Log`
+  - stores structured tenant events
 
-## Stack
+## Roles
 
-- Node.js
+### Admin
+
+- can see all jobs in the tenant
+- can manage users in the tenant
+- can change user roles
+- can activate/deactivate users
+- can manage tenant SMTP config
+- can read tenant audit logs
+
+### User
+
+- can log in
+- can view own profile
+- can queue email jobs
+- can view only their own jobs
+
+## Tech Stack
+
 - NestJS
-- TypeScript
+- TypeORM
+- PostgreSQL or MySQL
+- Redis
+- BullMQ
 - Nodemailer
-- Jest
-- Supertest
+- JWT auth
+- bcrypt password hashing
 
-## Retry Strategy
+## Environment Setup
 
-- max attempts: `3 total`
-- backoff:
-  - failure on attempt 1 -> retry after `1000ms`
-  - failure on attempt 2 -> retry after `2000ms`
-  - failure on attempt 3 -> mark as `failed`
+Copy `.env.example` to `.env` and adjust values.
 
-## Project Structure
+### PostgreSQL setup example
 
-```text
-src/
-  app.module.ts
-  main.ts
-  health/
-    health.controller.ts
-    health.module.ts
-  jobs/
-    dto/
-      create-email-job.dto.ts
-    models/
-      job.model.ts
-    email-job.processor.ts
-    job-queue.service.ts
-    jobs.controller.ts
-    jobs.module.ts
-    jobs.service.ts
-  observability/
-    log-entry.model.ts
-    logs.controller.ts
-    observability.module.ts
-    structured-logger.service.ts
-  smtp/
-    dto/
-      upsert-smtp-config.dto.ts
-    models/
-      smtp-config.model.ts
-    smtp-config.service.ts
-    smtp.controller.ts
-    smtp-mailer.service.ts
-    smtp.module.ts
-  ui/
-    ui.controller.ts
-    ui.module.ts
-    ui-page.ts
-test/
-  job-queue.service.spec.ts
-  jobs.e2e-spec.ts
+```env
+DB_PROVIDER=postgres
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_NAME=asytest
 ```
+
+### MySQL setup example
+
+```env
+DB_PROVIDER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=root
+DB_NAME=asytest
+```
+
+### Redis
+
+```env
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_QUEUE_NAME=email-jobs
+```
+
+## How the shared schema works on PostgreSQL and MySQL
+
+The entities were designed to stay portable across both engines:
+
+- UUID primary keys are generated in the app layer
+- foreign keys use portable string columns
+- JSON-like payloads are stored in `text` columns as serialized JSON
+- statuses and roles use string columns instead of database-specific enums
+- timestamp fields avoid PostgreSQL-only or MySQL-only features
+
+That keeps the table design usable on both databases without branching the domain model.
 
 ## Local Run
 
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-
-### Install
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### Start in Development
+### 2. Prepare database and Redis
+
+Make sure one database engine and Redis are running.
+
+### 3. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`.
+
+### 4. Run the app
 
 ```bash
 npm run start:dev
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
-
-### Build
+### 5. Build for production
 
 ```bash
 npm run build
-```
-
-### Run Production Build
-
-```bash
 npm run start:prod
 ```
 
-## UI Workflow
+## Main API Endpoints
 
-### 1. Open the dashboard
+### Public auth
 
-```text
-http://localhost:3000
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+
+### Authenticated
+
+- `GET /auth/me`
+- `GET /rbac/permissions-matrix`
+
+### Admin only
+
+- `GET /users`
+- `POST /users`
+- `PATCH /users/:userId/role`
+- `PATCH /users/:userId/status`
+- `PUT /smtp-config`
+- `POST /smtp-config/test`
+- `GET /logs`
+
+### Tenant user operations
+
+- `GET /smtp-config`
+- `POST /jobs/email`
+- `GET /jobs`
+- `GET /jobs/summary`
+- `GET /jobs/:jobId`
+
+## Example Flow
+
+### 1. Signup tenant admin
+
+```bash
+curl -X POST http://localhost:3000/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantName": "Acme Logistics",
+    "fullName": "Alice Admin",
+    "email": "alice@acme.com",
+    "password": "SuperSecret123"
+  }'
 ```
 
-### 2. Save SMTP settings
+### 2. Login
 
-Fields:
-
-- host
-- port
-- secure
-- username
-- password
-- from email
-- from name
-
-### 3. Test SMTP connection
-
-Use the `Test Connection` button from the UI.
-
-### 4. Queue a test email
-
-Required fields:
-
-- recipient email
-- subject
-- body
-
-Optional debug fields:
-
-- simulated fail attempts
-- processing delay
-
-### 5. Track everything live
-
-The dashboard shows:
-
-- summary counters
-- job list
-- selected job details
-- status timeline
-- related logs
-- global recent logs
-
-## API Endpoints
-
-### `GET /`
-
-Returns the dashboard UI.
-
-### `GET /health`
-
-Simple health endpoint.
-
-### `GET /smtp-config`
-
-Returns current SMTP config without exposing the password.
-
-### `PUT /smtp-config`
-
-Creates or updates SMTP config.
-
-Example:
-
-```json
-{
-  "host": "smtp.gmail.com",
-  "port": 587,
-  "secure": false,
-  "username": "your-user",
-  "password": "your-password",
-  "fromEmail": "noreply@example.com",
-  "fromName": "Delivery Bot"
-}
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@acme.com",
+    "password": "SuperSecret123"
+  }'
 ```
 
-### `POST /smtp-config/test`
+Take the returned `accessToken`.
 
-Tests the current or submitted SMTP config.
-
-### `POST /jobs/email`
-
-Queues an email job asynchronously.
-
-Response: `202 Accepted`
-
-Example:
-
-```json
-{
-  "to": "candidate@example.com",
-  "subject": "Async email test",
-  "body": "Hello from the async email worker",
-  "simulate": {
-    "failAttempts": 1,
-    "processingDelayMs": 100
-  }
-}
-```
-
-Notes:
-
-- SMTP config must exist first
-- `simulate` is optional and useful for retry demo/testing
-
-### `GET /jobs`
-
-Returns all jobs, newest first.
-
-### `GET /jobs/summary`
-
-Returns dashboard counters:
-
-- total
-- queued
-- processing
-- retryScheduled
-- succeeded
-- failed
-
-### `GET /jobs/:jobId`
-
-Returns one job with:
-
-- payload
-- attempts made
-- status
-- last error
-- history timeline
-- provider result
-
-### `GET /logs`
-
-Returns recent structured logs.
-
-Optional query:
-
-```text
-/logs?jobId=<job-id>
-```
-
-## Environment Variables
-
-Use `.env.example` as a reference.
-
-| Variable | Default | Purpose |
-|---|---:|---|
-| `PORT` | `3000` | HTTP port |
-| `WORKER_CONCURRENCY` | `1` | Number of in-memory workers |
-| `MAX_JOB_ATTEMPTS` | `3` | Total attempts per job |
-| `RETRY_BASE_DELAY_MS` | `1000` | Base retry delay |
-
-Notes:
-
-- invalid worker values fall back to safe defaults
-- all state is in memory
-- app restart clears SMTP config, jobs, and logs
-
-## Example curl Usage
-
-### Save SMTP
+### 3. Save SMTP config
 
 ```bash
 curl -X PUT http://localhost:3000/smtp-config \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
     "host": "smtp.gmail.com",
@@ -303,63 +213,110 @@ curl -X PUT http://localhost:3000/smtp-config \
     "secure": false,
     "username": "your-user",
     "password": "your-password",
-    "fromEmail": "noreply@example.com",
-    "fromName": "Delivery Bot"
+    "fromEmail": "noreply@acme.com",
+    "fromName": "Acme Mailer"
   }'
 ```
 
-### Test SMTP
-
-```bash
-curl -X POST http://localhost:3000/smtp-config/test \
-  -H "Content-Type: application/json" \
-  -d '{
-    "host": "smtp.gmail.com",
-    "port": 587,
-    "secure": false,
-    "username": "your-user",
-    "password": "your-password",
-    "fromEmail": "noreply@example.com",
-    "fromName": "Delivery Bot"
-  }'
-```
-
-### Queue Email
+### 4. Queue email job
 
 ```bash
 curl -X POST http://localhost:3000/jobs/email \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "to": "candidate@example.com",
-    "subject": "Async Demo",
-    "body": "Testing async email sending",
+    "to": "new-user@example.com",
+    "subject": "Welcome",
+    "body": "Hello from the production queue",
     "simulate": {
-      "failAttempts": 2,
+      "failAttempts": 1,
       "processingDelayMs": 100
     }
   }'
 ```
 
-### List Jobs
+### 5. Check job history
 
 ```bash
-curl http://localhost:3000/jobs
+curl http://localhost:3000/jobs \
+  -H "Authorization: Bearer <token>"
 ```
 
-### Get One Job
+## Forgot Password Flow
+
+### Request reset
 
 ```bash
-curl http://localhost:3000/jobs/<job-id>
+curl -X POST http://localhost:3000/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@acme.com"
+  }'
 ```
 
-### Read Logs
+In non-production mode the response includes `previewToken` for testing.
+
+### Reset password
 
 ```bash
-curl http://localhost:3000/logs
-curl "http://localhost:3000/logs?jobId=<job-id>"
+curl -X POST http://localhost:3000/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "<preview-token>",
+    "newPassword": "NewSuperSecret123"
+  }'
 ```
 
-## Testing
+## Redis Queue Behavior
+
+- queue backend: BullMQ
+- broker: Redis
+- default attempts: `3`
+- retry strategy: exponential backoff
+- job state is persisted in database
+- queue execution is handled by a worker inside the Nest app process
+
+## Production Notes
+
+- set `DB_SYNCHRONIZE=false` in production after schema is stabilized
+- replace JWT and encryption secrets with long secure values
+- run Redis separately, not in-process
+- use managed PostgreSQL or MySQL for durability
+- SMTP passwords are encrypted at rest before being stored
+- tenant isolation is applied at query level across users, jobs, SMTP config, and logs
+- regular users cannot read other users’ jobs
+
+## PM2
+
+An `ecosystem.config.js` is included.
+
+### Build and start
+
+```bash
+npm run build
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+## Docker
+
+Build:
+
+```bash
+docker build -t asytest-api .
+```
+
+Run:
+
+```bash
+docker run --env-file .env -p 3000:3000 asytest-api
+```
+
+Note:
+
+- database and Redis must be reachable from the container
+
+## Tests
 
 Run unit tests:
 
@@ -367,177 +324,26 @@ Run unit tests:
 npm test
 ```
 
-Run e2e tests:
+Run e2e-style HTTP tests:
 
 ```bash
 npm run test:e2e
 ```
 
-Covered scenarios:
+## Current Scope
 
-- queue success path
-- retry with exponential backoff
-- final permanent failure
-- SMTP save + async job creation flow
-- dashboard UI availability
-- payload validation
+This refactor gives you the main production backend foundation:
 
-## Docker
+- portable DB model for PostgreSQL/MySQL
+- Redis queue integration
+- tenant-aware auth and role separation
+- job persistence and auditability
 
-### Build
+If you want, the next iteration can be:
 
-```bash
-docker build -t async-email-control-room .
-```
-
-### Run
-
-```bash
-docker run -p 3000:3000 async-email-control-room
-```
-
-Then open:
-
-```text
-http://localhost:3000
-```
-
-## Cloud VM Hosting Process
-
-This app can run well on a small Ubuntu VM in AWS EC2, Azure VM, DigitalOcean, Hetzner, or similar.
-
-### 1. Create the VM
-
-- Ubuntu 22.04 LTS or newer
-- allow port `22` for SSH
-- allow port `80` if using Nginx
-- allow port `443` if adding HTTPS later
-- allow port `3000` only if exposing the app directly
-
-### 2. Connect
-
-```bash
-ssh <user>@<vm-public-ip>
-```
-
-### 3. Install Node.js
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs
-node -v
-npm -v
-```
-
-### 4. Copy the project
-
-Option A:
-
-```bash
-git clone <your-repository-url>
-cd AsyTest
-```
-
-Option B:
-
-```bash
-scp -r ./AsyTest <user>@<vm-public-ip>:~/
-```
-
-### 5. Install and build
-
-```bash
-npm install
-npm run build
-```
-
-### 6. Start the app
-
-Quick run:
-
-```bash
-PORT=3000 npm run start:prod
-```
-
-Recommended with PM2:
-
-```bash
-sudo npm install -g pm2
-pm2 start dist/main.js --name async-email-control-room
-pm2 save
-pm2 startup
-```
-
-### 7. Put Nginx in front
-
-Install:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y nginx
-```
-
-Example config:
-
-```nginx
-server {
-    listen 80;
-    server_name _;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Enable:
-
-```bash
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### 8. Verify
-
-```bash
-curl http://<vm-public-ip>/health
-curl http://<vm-public-ip>/
-```
-
-Then open the dashboard in the browser and:
-
-- save SMTP config
-- test SMTP connection
-- send a test email
-- watch the job history and logs
-
-## Production-Minded Notes
-
-- SMTP config is dynamic but in-memory only
-- password is accepted but never returned in API responses
-- every job keeps the SMTP snapshot used at queue time
-- job history helps explain retry flow clearly
-- logs are structured JSON and easy to ship later
-- because storage is in-memory, restarts remove all jobs and logs
-- this structure is ready to evolve into Redis/BullMQ/PostgreSQL later
-
-## Assumptions
-
-- `3 attempts` means `3 total tries`
-- no dead-letter queue is needed for this task
-- default worker concurrency remains simple by design
-
-## Future Improvements
-
-- persist queue and history in Redis or PostgreSQL
-- replace in-memory queue with BullMQ
-- add authentication for SMTP and dashboard actions
-- add Swagger / OpenAPI docs
-- add metrics and tracing
-- add log streaming with SSE or WebSocket
-- add HTTPS with Nginx and Let's Encrypt
+- TypeORM migrations
+- refresh tokens
+- invitation flow instead of direct admin-created passwords
+- Swagger docs
+- background location/geofence domain modeling
+- WebSocket/SSE live job updates
