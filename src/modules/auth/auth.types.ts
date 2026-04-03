@@ -12,6 +12,12 @@ export interface AuthResponse {
   };
 }
 
+export interface SignupResponse {
+  message: string;
+  requiresVerification: true;
+  previewOtp?: string;
+}
+
 export interface AccessTokenPayload {
   sub: string;
   tenantId: string;

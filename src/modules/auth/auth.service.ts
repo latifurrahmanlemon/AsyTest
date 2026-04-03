@@ -19,7 +19,10 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { SignupDto } from './dto/signup.dto';
-import { AccessTokenPayload, AuthResponse } from './auth.types';
+import { ResendSignupOtpDto } from './dto/resend-signup-otp.dto';
+import { VerifySignupOtpDto } from './dto/verify-signup-otp.dto';
+import { AccessTokenPayload, AuthResponse, SignupResponse } from './auth.types';
+import { AuthMailerService } from './auth-mailer.service';
 
 @Injectable()
 export class AuthService {
@@ -33,9 +36,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly cryptoService: CryptoService,
     private readonly auditLogService: AuditLogService,
+    private readonly authMailerService: AuthMailerService,
   ) {}
 
-  async signup(payload: SignupDto): Promise<AuthResponse> {
+  async signup(payload: SignupDto): Promise<SignupResponse> {
     const existingUser = await this.userRepository.findOne({
       where: { email: payload.email.toLowerCase() },
     });
@@ -57,24 +61,113 @@ export class AuthService {
       passwordHash: await hash(payload.password, 10),
       role: UserRole.ADMIN,
       isActive: true,
+      emailVerifiedAt: null,
+      emailVerificationCodeHash: null,
+      emailVerificationExpiresAt: null,
     });
+    const otp = this.prepareSignupOtp(user);
     await this.userRepository.save(user);
+    const previewOtp = await this.deliverSignupOtp(user, otp);
 
     await this.auditLogService.record({
       tenantId: tenant.id,
       userId: user.id,
       level: 'info',
-      event: 'auth.signup.completed',
+      event: 'auth.signup.pending_verification',
       resourceType: 'user',
       resourceId: user.id,
-      message: `Tenant ${tenant.name} and initial admin user created`,
+      message: `Tenant ${tenant.name} created and waiting for OTP verification`,
       metadata: {
         email: user.email,
         role: user.role,
       },
     });
 
-    return this.buildAuthResponse(user, tenant.name);
+    return {
+      message: 'Signup successful. Verify the OTP sent to your email to activate your account.',
+      requiresVerification: true,
+      previewOtp,
+    };
+  }
+
+  async verifySignupOtp(
+    payload: VerifySignupOtpDto,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email: payload.email.toLowerCase().trim() },
+      relations: { tenant: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('The verification request is invalid');
+    }
+
+    if (user.emailVerifiedAt) {
+      return {
+        message: 'Email is already verified. You can log in now.',
+      };
+    }
+
+    if (
+      !user.emailVerificationCodeHash ||
+      !user.emailVerificationExpiresAt ||
+      user.emailVerificationExpiresAt.getTime() < Date.now()
+    ) {
+      throw new BadRequestException('The verification code is invalid or expired');
+    }
+
+    const otpHash = this.cryptoService.hashToken(payload.otp.trim());
+    if (otpHash !== user.emailVerificationCodeHash) {
+      throw new BadRequestException('The verification code is invalid or expired');
+    }
+
+    user.emailVerifiedAt = new Date();
+    user.emailVerificationCodeHash = null;
+    user.emailVerificationExpiresAt = null;
+    await this.userRepository.save(user);
+
+    await this.auditLogService.record({
+      tenantId: user.tenantId,
+      userId: user.id,
+      level: 'info',
+      event: 'auth.signup.verified',
+      resourceType: 'user',
+      resourceId: user.id,
+      message: `User ${user.email} verified their email address`,
+    });
+
+    return {
+      message: 'Email verified successfully. You can log in now.',
+    };
+  }
+
+  async resendSignupOtp(
+    payload: ResendSignupOtpDto,
+  ): Promise<{ message: string; previewOtp?: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email: payload.email.toLowerCase().trim() },
+    });
+
+    if (!user) {
+      return {
+        message: 'If the account exists, a new OTP has been generated.',
+      };
+    }
+
+    if (user.emailVerifiedAt) {
+      return {
+        message: 'This account is already verified. You can log in now.',
+      };
+    }
+
+    const otp = this.prepareSignupOtp(user);
+    await this.userRepository.save(user);
+    const previewOtp = await this.deliverSignupOtp(user, otp);
+
+    return {
+      message: 'A new OTP has been generated and sent.',
+      previewOtp,
+    };
   }
 
   async login(payload: LoginDto): Promise<AuthResponse> {
@@ -85,6 +178,12 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException(
+        'Your account is not verified yet. Complete OTP verification first.',
+      );
     }
 
     const passwordMatches = await compare(payload.password, user.passwordHash);
@@ -174,6 +273,7 @@ export class AuthService {
 
     record.usedAt = new Date();
     record.user.passwordHash = await hash(payload.newPassword, 10);
+    record.user.emailVerifiedAt = record.user.emailVerifiedAt ?? new Date();
 
     await this.userRepository.save(record.user);
     await this.passwordResetTokenRepository.save(record);
@@ -233,7 +333,7 @@ export class AuthService {
       },
     });
 
-    if (!user) {
+    if (!user || !user.emailVerifiedAt) {
       throw new UnauthorizedException('Authenticated user no longer exists');
     }
 
@@ -273,6 +373,33 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  private prepareSignupOtp(user: UserEntity): string {
+    const otp = this.generateOtp();
+    user.emailVerificationCodeHash = this.cryptoService.hashToken(otp);
+    user.emailVerificationExpiresAt = new Date(
+      Date.now() + this.readPositiveInteger(process.env.SIGNUP_OTP_EXPIRES_MINUTES, 10) * 60 * 1000,
+    );
+
+    return otp;
+  }
+
+  private async deliverSignupOtp(
+    user: UserEntity,
+    otp: string,
+  ): Promise<string | undefined> {
+    await this.authMailerService.sendSignupOtp({
+      email: user.email,
+      fullName: user.fullName,
+      otp,
+    });
+
+    return process.env.NODE_ENV === 'production' ? undefined : otp;
+  }
+
+  private generateOtp(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
   }
 
   private async generateTenantSlug(name: string): Promise<string> {

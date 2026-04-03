@@ -25,11 +25,19 @@
 
         <div class="panel auth-panel" id="auth-panel">
           <div class="panel__header">
-            <p class="eyebrow">Login</p>
-            <h2>Sign in to continue</h2>
+            <p class="eyebrow">Access</p>
+            <h2 id="auth-title">Sign in to continue</h2>
           </div>
 
-          <form id="login-form" class="stack">
+          <div class="auth-switcher">
+            <button class="switcher is-active" type="button" data-auth-view="login">Login</button>
+            <button class="switcher" type="button" data-auth-view="signup">Sign Up</button>
+            <button class="switcher" type="button" data-auth-view="verify">Verify OTP</button>
+            <button class="switcher" type="button" data-auth-view="forgot">Forgot</button>
+            <button class="switcher" type="button" data-auth-view="reset">Reset</button>
+          </div>
+
+          <form id="login-form" class="stack auth-view" data-auth-view-panel="login">
             <label class="field">
               <span>Email</span>
               <input
@@ -57,6 +65,65 @@
             <button class="button button--primary" type="submit">Login</button>
             <p class="hint">Default admin: <strong>admin@admin.com</strong> / <strong>password</strong></p>
             <p id="login-message" class="message" role="status"></p>
+          </form>
+
+          <form id="signup-form" class="stack auth-view hidden" data-auth-view-panel="signup">
+            <label class="field">
+              <span>Tenant Name</span>
+              <input name="tenantName" type="text" required />
+            </label>
+            <label class="field">
+              <span>Full Name</span>
+              <input name="fullName" type="text" required />
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input name="email" type="email" required />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input name="password" type="password" minlength="8" required />
+            </label>
+            <button class="button button--primary" type="submit">Create Account</button>
+            <p id="signup-message" class="message" role="status"></p>
+          </form>
+
+          <form id="verify-form" class="stack auth-view hidden" data-auth-view-panel="verify">
+            <label class="field">
+              <span>Email</span>
+              <input name="email" type="email" required />
+            </label>
+            <label class="field">
+              <span>OTP</span>
+              <input name="otp" type="text" inputmode="numeric" minlength="6" maxlength="6" required />
+            </label>
+            <div class="inline-actions">
+              <button class="button button--primary" type="submit">Verify OTP</button>
+              <button id="resend-otp-button" class="button button--ghost" type="button">Resend OTP</button>
+            </div>
+            <p id="verify-message" class="message" role="status"></p>
+          </form>
+
+          <form id="forgot-form" class="stack auth-view hidden" data-auth-view-panel="forgot">
+            <label class="field">
+              <span>Email</span>
+              <input name="email" type="email" required />
+            </label>
+            <button class="button button--primary" type="submit">Send Reset Token</button>
+            <p id="forgot-message" class="message" role="status"></p>
+          </form>
+
+          <form id="reset-form" class="stack auth-view hidden" data-auth-view-panel="reset">
+            <label class="field">
+              <span>Reset Token</span>
+              <input name="token" type="text" required />
+            </label>
+            <label class="field">
+              <span>New Password</span>
+              <input name="newPassword" type="password" minlength="8" required />
+            </label>
+            <button class="button button--primary" type="submit">Reset Password</button>
+            <p id="reset-message" class="message" role="status"></p>
           </form>
         </div>
       </section>

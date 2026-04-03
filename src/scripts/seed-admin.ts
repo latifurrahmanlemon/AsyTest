@@ -99,6 +99,9 @@ async function run(): Promise<void> {
         passwordHash,
         role: UserRole.ADMIN,
         isActive: true,
+        emailVerifiedAt: new Date(),
+        emailVerificationCodeHash: null,
+        emailVerificationExpiresAt: null,
       });
     } else {
       user.tenantId = tenant.id;
@@ -106,6 +109,9 @@ async function run(): Promise<void> {
       user.passwordHash = passwordHash;
       user.role = UserRole.ADMIN;
       user.isActive = true;
+      user.emailVerifiedAt = new Date();
+      user.emailVerificationCodeHash = null;
+      user.emailVerificationExpiresAt = null;
     }
 
     await userRepository.save(user);

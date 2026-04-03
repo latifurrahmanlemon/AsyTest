@@ -52,6 +52,9 @@ export class UsersService {
           ? UserRole.ADMIN
           : UserRole.USER,
       isActive: true,
+      emailVerifiedAt: new Date(),
+      emailVerificationCodeHash: null,
+      emailVerificationExpiresAt: null,
     });
     await this.userRepository.save(user);
 

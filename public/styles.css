@@ -129,6 +129,30 @@ h3 {
   padding: 28px;
 }
 
+.auth-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.switcher {
+  appearance: none;
+  border: 1px solid rgba(84, 62, 43, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--muted);
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.switcher.is-active {
+  background: rgba(164, 67, 22, 0.12);
+  color: var(--accent-dark);
+  border-color: rgba(164, 67, 22, 0.18);
+}
+
 .panel__header {
   margin-bottom: 18px;
 }

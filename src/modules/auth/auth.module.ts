@@ -9,6 +9,7 @@ import { TenantEntity } from '../../database/entities/tenant.entity';
 import { UserEntity } from '../../database/entities/user.entity';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AuthController } from './auth.controller';
+import { AuthMailerService } from './auth-mailer.service';
 import { AuthService } from './auth.service';
 
 @Module({
@@ -22,7 +23,13 @@ import { AuthService } from './auth.service';
     forwardRef(() => ObservabilityModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, CryptoService, JwtAuthGuard, RolesGuard],
+  providers: [
+    AuthService,
+    AuthMailerService,
+    CryptoService,
+    JwtAuthGuard,
+    RolesGuard,
+  ],
   exports: [AuthService, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

@@ -173,6 +173,30 @@ npm run db:migration:generate -- src/database/migrations/AddSomething
 
 `DB_SYNCHRONIZE` should stay `false` in production once you are using migrations.
 
+### Signup OTP and password recovery
+
+New signups now require OTP verification before login is allowed.
+
+Set these optional environment variables for actual OTP email delivery:
+
+```env
+SIGNUP_OTP_EXPIRES_MINUTES=10
+APP_MAIL_HOST=smtp.example.com
+APP_MAIL_PORT=587
+APP_MAIL_SECURE=false
+APP_MAIL_USERNAME=mailer@example.com
+APP_MAIL_PASSWORD=secret
+APP_MAIL_FROM_EMAIL=noreply@example.com
+APP_MAIL_FROM_NAME=AsyTest
+```
+
+In non-production mode:
+
+- signup returns `previewOtp` when mail is not configured
+- forgot-password returns `previewToken`
+
+In production mode, configure the `APP_MAIL_*` variables so OTP delivery works.
+
 ### Seed an admin user
 
 Default seeded admin credentials:

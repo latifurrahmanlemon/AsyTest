@@ -4,13 +4,26 @@ const userKey = 'asytest.user';
 const state = {
   token: localStorage.getItem(tokenKey),
   user: parseJson(localStorage.getItem(userKey)),
+  authView: 'login',
 };
 
 const elements = {
   authPanel: document.getElementById('auth-panel'),
+  authTitle: document.getElementById('auth-title'),
+  authSwitchers: Array.from(document.querySelectorAll('[data-auth-view]')),
+  authViews: Array.from(document.querySelectorAll('[data-auth-view-panel]')),
   dashboard: document.getElementById('dashboard'),
   loginForm: document.getElementById('login-form'),
   loginMessage: document.getElementById('login-message'),
+  signupForm: document.getElementById('signup-form'),
+  signupMessage: document.getElementById('signup-message'),
+  verifyForm: document.getElementById('verify-form'),
+  verifyMessage: document.getElementById('verify-message'),
+  resendOtpButton: document.getElementById('resend-otp-button'),
+  forgotForm: document.getElementById('forgot-form'),
+  forgotMessage: document.getElementById('forgot-message'),
+  resetForm: document.getElementById('reset-form'),
+  resetMessage: document.getElementById('reset-message'),
   welcomeTitle: document.getElementById('welcome-title'),
   welcomeSubtitle: document.getElementById('welcome-subtitle'),
   stats: document.getElementById('stats'),
@@ -42,13 +55,44 @@ function boot() {
 }
 
 function bindEvents() {
+  elements.authSwitchers.forEach((button) => {
+    button.addEventListener('click', () => setAuthView(button.dataset.authView));
+  });
+
   elements.loginForm.addEventListener('submit', handleLogin);
+  elements.signupForm.addEventListener('submit', handleSignup);
+  elements.verifyForm.addEventListener('submit', handleVerifyOtp);
+  elements.resendOtpButton.addEventListener('click', handleResendOtp);
+  elements.forgotForm.addEventListener('submit', handleForgotPassword);
+  elements.resetForm.addEventListener('submit', handleResetPassword);
   elements.logoutButton.addEventListener('click', handleLogout);
   elements.refreshButton.addEventListener('click', () => hydrateDashboard());
   elements.jobForm.addEventListener('submit', handleCreateJob);
   elements.userForm.addEventListener('submit', handleCreateUser);
   elements.smtpForm.addEventListener('submit', handleSaveSmtp);
   elements.smtpTestButton.addEventListener('click', handleTestSmtp);
+}
+
+function setAuthView(view) {
+  state.authView = view;
+
+  const titles = {
+    login: 'Sign in to continue',
+    signup: 'Create your account',
+    verify: 'Verify your email OTP',
+    forgot: 'Request a password reset',
+    reset: 'Apply a new password',
+  };
+
+  elements.authTitle.textContent = titles[view] || titles.login;
+
+  elements.authSwitchers.forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.authView === view);
+  });
+
+  elements.authViews.forEach((panel) => {
+    panel.classList.toggle('hidden', panel.dataset.authViewPanel !== view);
+  });
 }
 
 async function handleLogin(event) {
@@ -72,10 +116,138 @@ async function handleLogin(event) {
     localStorage.setItem(tokenKey, response.accessToken);
     localStorage.setItem(userKey, JSON.stringify(response.user));
     setMessage(elements.loginMessage, 'Login successful.', 'success');
-    elements.loginForm.reset();
     await hydrateDashboard();
   } catch (error) {
     setMessage(elements.loginMessage, error.message, 'error');
+  }
+}
+
+async function handleSignup(event) {
+  event.preventDefault();
+  setMessage(elements.signupMessage, 'Creating account and generating OTP...');
+
+  const formData = new FormData(elements.signupForm);
+  const payload = {
+    tenantName: String(formData.get('tenantName') || '').trim(),
+    fullName: String(formData.get('fullName') || '').trim(),
+    email: String(formData.get('email') || '').trim(),
+    password: String(formData.get('password') || ''),
+  };
+
+  try {
+    const response = await api('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+
+    setMessage(
+      elements.signupMessage,
+      buildOtpMessage(response.message, response.previewOtp),
+      'success',
+    );
+    elements.verifyForm.email.value = payload.email;
+    elements.loginForm.email.value = payload.email;
+    setAuthView('verify');
+  } catch (error) {
+    setMessage(elements.signupMessage, error.message, 'error');
+  }
+}
+
+async function handleVerifyOtp(event) {
+  event.preventDefault();
+  setMessage(elements.verifyMessage, 'Verifying OTP...');
+
+  const formData = new FormData(elements.verifyForm);
+  const payload = {
+    email: String(formData.get('email') || '').trim(),
+    otp: String(formData.get('otp') || '').trim(),
+  };
+
+  try {
+    const response = await api('/auth/verify-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+    setMessage(elements.verifyMessage, response.message, 'success');
+    elements.loginForm.email.value = payload.email;
+    setAuthView('login');
+  } catch (error) {
+    setMessage(elements.verifyMessage, error.message, 'error');
+  }
+}
+
+async function handleResendOtp() {
+  setMessage(elements.verifyMessage, 'Generating a fresh OTP...');
+
+  const email = String(elements.verifyForm.email.value || '').trim();
+  if (!email) {
+    setMessage(elements.verifyMessage, 'Enter your email first.', 'error');
+    return;
+  }
+
+  try {
+    const response = await api('/auth/resend-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }, false);
+    setMessage(
+      elements.verifyMessage,
+      buildOtpMessage(response.message, response.previewOtp),
+      'success',
+    );
+  } catch (error) {
+    setMessage(elements.verifyMessage, error.message, 'error');
+  }
+}
+
+async function handleForgotPassword(event) {
+  event.preventDefault();
+  setMessage(elements.forgotMessage, 'Generating reset token...');
+
+  const formData = new FormData(elements.forgotForm);
+  const payload = {
+    email: String(formData.get('email') || '').trim(),
+  };
+
+  try {
+    const response = await api('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+    setMessage(
+      elements.forgotMessage,
+      response.previewToken
+        ? `${response.message} Preview reset token: ${response.previewToken}`
+        : response.message,
+      'success',
+    );
+    elements.resetForm.token.value = response.previewToken || '';
+    setAuthView('reset');
+  } catch (error) {
+    setMessage(elements.forgotMessage, error.message, 'error');
+  }
+}
+
+async function handleResetPassword(event) {
+  event.preventDefault();
+  setMessage(elements.resetMessage, 'Updating password...');
+
+  const formData = new FormData(elements.resetForm);
+  const payload = {
+    token: String(formData.get('token') || '').trim(),
+    newPassword: String(formData.get('newPassword') || ''),
+  };
+
+  try {
+    const response = await api('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, false);
+    setMessage(elements.resetMessage, response.message, 'success');
+    elements.loginForm.password.value = '';
+    setAuthView('login');
+  } catch (error) {
+    setMessage(elements.resetMessage, error.message, 'error');
   }
 }
 
@@ -204,8 +376,11 @@ function renderLoggedOut() {
   elements.authPanel.classList.remove('hidden');
   elements.dashboard.classList.add('hidden');
   elements.loginForm.email.value = state.user?.email || 'admin@admin.com';
-  elements.loginForm.password.value = 'password';
+  if (!elements.loginForm.password.value) {
+    elements.loginForm.password.value = 'password';
+  }
   clearMessages();
+  setAuthView(state.authView || 'login');
 }
 
 function renderLoggedIn(profile, summary, jobs, smtpConfig) {
@@ -323,7 +498,7 @@ async function api(path, options = {}, requireAuth = true) {
   const data = await parseResponse(response);
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && requireAuth) {
       handleLogout();
     }
 
@@ -355,6 +530,10 @@ function parseJson(value) {
   }
 }
 
+function buildOtpMessage(message, previewOtp) {
+  return previewOtp ? `${message} Preview OTP: ${previewOtp}` : message;
+}
+
 function formatDate(value) {
   try {
     return new Date(value).toLocaleString();
@@ -379,6 +558,10 @@ function setMessage(element, message, type) {
 function clearMessages() {
   [
     elements.loginMessage,
+    elements.signupMessage,
+    elements.verifyMessage,
+    elements.forgotMessage,
+    elements.resetMessage,
     elements.jobMessage,
     elements.userMessage,
     elements.smtpMessage,

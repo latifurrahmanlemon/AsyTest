@@ -43,6 +43,15 @@ export class UserEntity {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerifiedAt!: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  emailVerificationCodeHash!: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationExpiresAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
