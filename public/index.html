@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AsyTest Control Room</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow">AsyTest</p>
+          <h1>Async Email Control Room</h1>
+          <p class="lead">
+            Log in to manage tenant users, SMTP settings, and queued email jobs
+            from one browser-based control panel.
+          </p>
+          <div class="hero__chips">
+            <span>Tenant-aware</span>
+            <span>Async jobs</span>
+            <span>SMTP control</span>
+          </div>
+        </div>
+
+        <div class="panel auth-panel" id="auth-panel">
+          <div class="panel__header">
+            <p class="eyebrow">Login</p>
+            <h2>Sign in to continue</h2>
+          </div>
+
+          <form id="login-form" class="stack">
+            <label class="field">
+              <span>Email</span>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value="admin@admin.com"
+                autocomplete="email"
+                required
+              />
+            </label>
+
+            <label class="field">
+              <span>Password</span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+
+            <button class="button button--primary" type="submit">Login</button>
+            <p class="hint">Default admin: <strong>admin@admin.com</strong> / <strong>password</strong></p>
+            <p id="login-message" class="message" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="dashboard" class="dashboard hidden">
+        <header class="dashboard__header">
+          <div>
+            <p class="eyebrow">Control Room</p>
+            <h2 id="welcome-title">Welcome</h2>
+            <p id="welcome-subtitle" class="lead lead--small"></p>
+          </div>
+          <div class="dashboard__actions">
+            <button id="refresh-button" class="button button--ghost" type="button">
+              Refresh
+            </button>
+            <button id="logout-button" class="button button--danger" type="button">
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="grid">
+          <section class="panel">
+            <div class="panel__header">
+              <p class="eyebrow">Queue</p>
+              <h3>Create Email Job</h3>
+            </div>
+            <form id="job-form" class="stack">
+              <label class="field">
+                <span>To Email</span>
+                <input name="to" type="email" required />
+              </label>
+              <label class="field">
+                <span>Subject</span>
+                <input name="subject" type="text" required />
+              </label>
+              <label class="field">
+                <span>Body</span>
+                <textarea name="body" rows="5" required></textarea>
+              </label>
+              <button class="button button--primary" type="submit">Queue Email</button>
+              <p id="job-message" class="message" role="status"></p>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel__header">
+              <p class="eyebrow">SMTP</p>
+              <h3>SMTP Configuration</h3>
+            </div>
+            <form id="smtp-form" class="stack">
+              <label class="field">
+                <span>Host</span>
+                <input name="host" type="text" required />
+              </label>
+              <div class="split">
+                <label class="field">
+                  <span>Port</span>
+                  <input name="port" type="number" min="1" required />
+                </label>
+                <label class="field field--check">
+                  <span>Secure</span>
+                  <input name="secure" type="checkbox" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Username</span>
+                <input name="username" type="text" />
+              </label>
+              <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" />
+              </label>
+              <label class="field">
+                <span>From Email</span>
+                <input name="fromEmail" type="email" required />
+              </label>
+              <label class="field">
+                <span>From Name</span>
+                <input name="fromName" type="text" />
+              </label>
+              <div class="inline-actions">
+                <button class="button button--primary" type="submit">Save SMTP</button>
+                <button id="smtp-test-button" class="button button--ghost" type="button">
+                  Test SMTP
+                </button>
+              </div>
+              <p id="smtp-message" class="message" role="status"></p>
+            </form>
+          </section>
+
+          <section class="panel panel--wide">
+            <div class="panel__header">
+              <p class="eyebrow">Jobs</p>
+              <h3>Recent Email Jobs</h3>
+            </div>
+            <div id="jobs-list" class="list"></div>
+          </section>
+
+          <section class="panel panel--wide" id="users-panel">
+            <div class="panel__header">
+              <p class="eyebrow">Tenant</p>
+              <h3>User Management</h3>
+            </div>
+
+            <form id="user-form" class="stack stack--compact">
+              <div class="triple">
+                <label class="field">
+                  <span>Full Name</span>
+                  <input name="fullName" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Email</span>
+                  <input name="email" type="email" required />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input name="password" type="password" minlength="8" required />
+                </label>
+              </div>
+              <div class="split">
+                <label class="field">
+                  <span>Role</span>
+                  <select name="role">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+                <div class="field field--actions">
+                  <span>Create User</span>
+                  <button class="button button--primary" type="submit">Add User</button>
+                </div>
+              </div>
+              <p id="user-message" class="message" role="status"></p>
+            </form>
+
+            <div id="users-list" class="list"></div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>
