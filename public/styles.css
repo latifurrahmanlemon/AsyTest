@@ -1,16 +1,16 @@
 :root {
-  --bg: #f4efe4;
-  --bg-strong: #e2d3bb;
-  --surface: rgba(255, 250, 241, 0.86);
-  --surface-strong: #fffaf1;
-  --text: #1f1a16;
-  --muted: #6b5d4f;
-  --line: rgba(84, 62, 43, 0.14);
-  --accent: #a44316;
-  --accent-dark: #7f2f0a;
+  --bg: #edf5ef;
+  --bg-strong: #cfe3d4;
+  --surface: rgba(248, 253, 249, 0.88);
+  --surface-strong: #fcfffc;
+  --text: #163126;
+  --muted: #567062;
+  --line: rgba(41, 87, 63, 0.14);
+  --accent: #2f7a4e;
+  --accent-dark: #1f5d39;
   --danger: #8d1f2c;
   --success: #215c3e;
-  --shadow: 0 24px 70px rgba(51, 35, 17, 0.16);
+  --shadow: 0 24px 70px rgba(24, 56, 37, 0.14);
   --radius: 24px;
 }
 
@@ -28,9 +28,9 @@ body {
   font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(164, 67, 22, 0.14), transparent 28%),
-    radial-gradient(circle at top right, rgba(33, 92, 62, 0.16), transparent 24%),
-    linear-gradient(135deg, #f8f4eb 0%, #efe3d0 45%, #e7dcc8 100%);
+    radial-gradient(circle at top left, rgba(47, 122, 78, 0.16), transparent 28%),
+    radial-gradient(circle at top right, rgba(94, 145, 112, 0.16), transparent 24%),
+    linear-gradient(135deg, #f3faf4 0%, #e1efe4 45%, #d7e7db 100%);
 }
 
 .shell {
@@ -81,9 +81,10 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(1.4rem, 2.35vw, 2.15rem);
-  max-width: none;
-  white-space: nowrap;
+  font-size: clamp(1.2rem, 2vw, 1.85rem);
+  max-width: 12ch;
+  white-space: normal;
+  line-height: 1.06;
 }
 
 h2 {
@@ -117,7 +118,7 @@ h3 {
 .hero__chips span {
   display: inline-flex;
   align-items: center;
-  border: 1px solid rgba(164, 67, 22, 0.18);
+  border: 1px solid rgba(47, 122, 78, 0.18);
   border-radius: 999px;
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.52);
@@ -153,9 +154,9 @@ h3 {
 }
 
 .switcher.is-active {
-  background: rgba(164, 67, 22, 0.12);
+  background: rgba(47, 122, 78, 0.12);
   color: var(--accent-dark);
-  border-color: rgba(164, 67, 22, 0.18);
+  border-color: rgba(47, 122, 78, 0.18);
 }
 
 .panel__header {
@@ -200,8 +201,8 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: rgba(164, 67, 22, 0.52);
-  box-shadow: 0 0 0 4px rgba(164, 67, 22, 0.1);
+  border-color: rgba(47, 122, 78, 0.52);
+  box-shadow: 0 0 0 4px rgba(47, 122, 78, 0.1);
 }
 
 textarea {
@@ -242,8 +243,8 @@ textarea {
 }
 
 .button--primary {
-  background: linear-gradient(135deg, #b74a1a, #8e320d);
-  color: #fff9f5;
+  background: linear-gradient(135deg, #3f925f, #276844);
+  color: #f5fff8;
 }
 
 .button--ghost {
