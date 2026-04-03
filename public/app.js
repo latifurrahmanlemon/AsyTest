@@ -5,14 +5,26 @@ const state = {
   token: localStorage.getItem(tokenKey),
   user: parseJson(localStorage.getItem(userKey)),
   authView: 'login',
+  activeSection: 'dashboard',
+  users: [],
+  usersSearch: '',
+  usersSort: 'name-asc',
+  usersPage: 1,
+  usersPerPage: 8,
 };
 
 const elements = {
+  heroSection: document.getElementById('hero-section'),
   authPanel: document.getElementById('auth-panel'),
   authTitle: document.getElementById('auth-title'),
   authSwitchers: Array.from(document.querySelectorAll('[data-auth-view]')),
   authViews: Array.from(document.querySelectorAll('[data-auth-view-panel]')),
   dashboard: document.getElementById('dashboard'),
+  sectionTabs: Array.from(document.querySelectorAll('[data-section]')),
+  sectionViews: Array.from(document.querySelectorAll('[data-section-panel]')),
+  dashboardNav: document.getElementById('dashboard-nav'),
+  navUsers: document.getElementById('nav-users'),
+  navSettings: document.getElementById('nav-settings'),
   loginForm: document.getElementById('login-form'),
   loginMessage: document.getElementById('login-message'),
   signupForm: document.getElementById('signup-form'),
@@ -29,6 +41,9 @@ const elements = {
   stats: document.getElementById('stats'),
   jobsList: document.getElementById('jobs-list'),
   usersList: document.getElementById('users-list'),
+  usersSearch: document.getElementById('users-search'),
+  usersSort: document.getElementById('users-sort'),
+  usersPagination: document.getElementById('users-pagination'),
   usersPanel: document.getElementById('users-panel'),
   userForm: document.getElementById('user-form'),
   userMessage: document.getElementById('user-message'),
@@ -58,6 +73,9 @@ function bindEvents() {
   elements.authSwitchers.forEach((button) => {
     button.addEventListener('click', () => setAuthView(button.dataset.authView));
   });
+  elements.sectionTabs.forEach((button) => {
+    button.addEventListener('click', () => setSection(button.dataset.section));
+  });
 
   elements.loginForm.addEventListener('submit', handleLogin);
   elements.signupForm.addEventListener('submit', handleSignup);
@@ -69,6 +87,10 @@ function bindEvents() {
   elements.refreshButton.addEventListener('click', () => hydrateDashboard());
   elements.jobForm.addEventListener('submit', handleCreateJob);
   elements.userForm.addEventListener('submit', handleCreateUser);
+  elements.usersSearch.addEventListener('input', handleUserSearch);
+  elements.usersSort.addEventListener('change', handleUserSort);
+  elements.usersList.addEventListener('click', handleUsersTableClick);
+  elements.usersPagination.addEventListener('click', handleUsersTableClick);
   elements.smtpForm.addEventListener('submit', handleSaveSmtp);
   elements.smtpTestButton.addEventListener('click', handleTestSmtp);
 }
@@ -92,6 +114,18 @@ function setAuthView(view) {
 
   elements.authViews.forEach((panel) => {
     panel.classList.toggle('hidden', panel.dataset.authViewPanel !== view);
+  });
+}
+
+function setSection(section) {
+  state.activeSection = section;
+
+  elements.sectionTabs.forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.section === section);
+  });
+
+  elements.sectionViews.forEach((panel) => {
+    panel.classList.toggle('hidden', panel.dataset.sectionPanel !== section);
   });
 }
 
@@ -274,10 +308,19 @@ async function hydrateDashboard() {
 
   if (profile.role === 'admin') {
     const users = await api('/users');
-    renderUsers(users);
+    state.users = users;
+    renderUsers();
     elements.usersPanel.classList.remove('hidden');
+    elements.navUsers.classList.remove('hidden');
+    elements.navSettings.classList.remove('hidden');
   } else {
+    state.users = [];
     elements.usersPanel.classList.add('hidden');
+    elements.navUsers.classList.add('hidden');
+    elements.navSettings.classList.add('hidden');
+    if (state.activeSection !== 'dashboard') {
+      setSection('dashboard');
+    }
   }
 }
 
@@ -324,10 +367,93 @@ async function handleCreateUser(event) {
     });
     elements.userForm.reset();
     setMessage(elements.userMessage, 'User created.', 'success');
-    const users = await api('/users');
-    renderUsers(users);
+    await refreshUsers();
   } catch (error) {
     setMessage(elements.userMessage, error.message, 'error');
+  }
+}
+
+async function refreshUsers() {
+  const users = await api('/users');
+  state.users = users;
+  renderUsers();
+}
+
+function handleUserSearch(event) {
+  state.usersSearch = String(event.target.value || '').trim().toLowerCase();
+  state.usersPage = 1;
+  renderUsers();
+}
+
+function handleUserSort(event) {
+  state.usersSort = String(event.target.value || 'name-asc');
+  state.usersPage = 1;
+  renderUsers();
+}
+
+async function handleUsersTableClick(event) {
+  const actionButton = event.target.closest('[data-user-action]');
+  const pageButton = event.target.closest('[data-page]');
+
+  if (pageButton) {
+    const page = Number(pageButton.dataset.page);
+    if (page > 0) {
+      state.usersPage = page;
+      renderUsers();
+    }
+    return;
+  }
+
+  if (!actionButton) {
+    return;
+  }
+
+  const userId = actionButton.dataset.userId;
+  const action = actionButton.dataset.userAction;
+  if (!userId || !action) {
+    return;
+  }
+
+  actionButton.disabled = true;
+
+  try {
+    if (action === 'toggle-status') {
+      const isActive = actionButton.dataset.isActive === 'true';
+      const label = isActive ? 'deactivate' : 'activate';
+      if (!window.confirm(`Do you want to ${label} this user?`)) {
+        return;
+      }
+      await api(`/users/${userId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: !isActive }),
+      });
+    }
+
+    if (action === 'toggle-role') {
+      const role = actionButton.dataset.role === 'admin' ? 'user' : 'admin';
+      if (!window.confirm(`Do you want to change this user role to ${role}?`)) {
+        return;
+      }
+      await api(`/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      });
+    }
+
+    if (action === 'delete-user') {
+      if (!window.confirm('Do you want to permanently delete this user?')) {
+        return;
+      }
+      await api(`/users/${userId}`, {
+        method: 'DELETE',
+      });
+    }
+
+    await refreshUsers();
+  } catch (error) {
+    setMessage(elements.userMessage, error.message, 'error');
+  } finally {
+    actionButton.disabled = false;
   }
 }
 
@@ -373,6 +499,7 @@ async function handleTestSmtp() {
 }
 
 function renderLoggedOut() {
+  elements.heroSection.classList.remove('hidden');
   elements.authPanel.classList.remove('hidden');
   elements.dashboard.classList.add('hidden');
   elements.loginForm.email.value = state.user?.email || 'admin@admin.com';
@@ -381,9 +508,11 @@ function renderLoggedOut() {
   }
   clearMessages();
   setAuthView(state.authView || 'login');
+  setSection('dashboard');
 }
 
 function renderLoggedIn(profile, summary, jobs, smtpConfig) {
+  elements.heroSection.classList.add('hidden');
   elements.authPanel.classList.add('hidden');
   elements.dashboard.classList.remove('hidden');
   elements.welcomeTitle.textContent = `Welcome, ${profile.fullName}`;
@@ -393,6 +522,7 @@ function renderLoggedIn(profile, summary, jobs, smtpConfig) {
   renderJobs(jobs);
   fillSmtpForm(smtpConfig);
   clearMessages();
+  setSection(state.activeSection || 'dashboard');
 }
 
 function renderStats(summary) {
@@ -444,31 +574,134 @@ function renderJobs(jobs) {
     .join('');
 }
 
-function renderUsers(users) {
-  if (!users.length) {
+function renderUsers() {
+  const filteredUsers = state.users.filter((user) => {
+    if (!state.usersSearch) {
+      return true;
+    }
+
+    const target = `${user.fullName} ${user.email}`.toLowerCase();
+    return target.includes(state.usersSearch);
+  });
+
+  const sortedUsers = [...filteredUsers].sort((left, right) => {
+    switch (state.usersSort) {
+      case 'name-desc':
+        return right.fullName.localeCompare(left.fullName);
+      case 'email-asc':
+        return left.email.localeCompare(right.email);
+      case 'email-desc':
+        return right.email.localeCompare(left.email);
+      case 'role-asc':
+        return left.role.localeCompare(right.role) || left.fullName.localeCompare(right.fullName);
+      case 'status-asc':
+        return Number(left.isActive) - Number(right.isActive) || left.fullName.localeCompare(right.fullName);
+      case 'status-desc':
+        return Number(right.isActive) - Number(left.isActive) || left.fullName.localeCompare(right.fullName);
+      case 'name-asc':
+      default:
+        return left.fullName.localeCompare(right.fullName);
+    }
+  });
+
+  if (!sortedUsers.length) {
     elements.usersList.innerHTML = '<div class="empty">No users found.</div>';
+    elements.usersPagination.innerHTML = '';
     return;
   }
 
-  elements.usersList.innerHTML = users
-    .map(
-      (user) => `
-        <article class="card">
-          <div class="card__top">
-            <div>
-              <p class="card__title">${escapeHtml(user.fullName)}</p>
-              <p class="card__meta">
-                ${escapeHtml(user.email)}<br />
-                Role: ${escapeHtml(user.role)}<br />
-                Status: ${escapeHtml(user.isActive ? 'active' : 'inactive')}
-              </p>
-            </div>
-            <span class="pill">${escapeHtml(user.role)}</span>
-          </div>
-        </article>
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / state.usersPerPage));
+  state.usersPage = Math.min(state.usersPage, totalPages);
+  const start = (state.usersPage - 1) * state.usersPerPage;
+  const pageUsers = sortedUsers.slice(start, start + state.usersPerPage);
+
+  elements.usersList.innerHTML = pageUsers
+    .reduce(
+      (html, user) =>
+        html +
+        `
+          <tr>
+            <td>${escapeHtml(user.fullName)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td><span class="pill">${escapeHtml(user.role)}</span></td>
+            <td>
+              <span class="status-dot ${user.isActive ? 'is-active' : 'is-inactive'}">
+                ${escapeHtml(user.isActive ? 'Active' : 'Inactive')}
+              </span>
+            </td>
+            <td>
+              <div class="table-actions">
+                <button
+                  class="button button--small button--ghost"
+                  type="button"
+                  data-user-action="toggle-role"
+                  data-user-id="${escapeHtml(user.id)}"
+                  data-role="${escapeHtml(user.role)}"
+                >
+                  ${escapeHtml(user.role === 'admin' ? 'Make User' : 'Make Admin')}
+                </button>
+                <button
+                  class="button button--small ${user.isActive ? 'button--danger-soft' : 'button--ghost'}"
+                  type="button"
+                  data-user-action="toggle-status"
+                  data-user-id="${escapeHtml(user.id)}"
+                  data-is-active="${escapeHtml(String(user.isActive))}"
+                >
+                  ${escapeHtml(user.isActive ? 'Deactivate' : 'Activate')}
+                </button>
+                <button
+                  class="button button--small button--danger-soft"
+                  type="button"
+                  data-user-action="delete-user"
+                  data-user-id="${escapeHtml(user.id)}"
+                >
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        `,
+      `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
       `,
-    )
-    .join('');
+    ) +
+    `
+          </tbody>
+        </table>
+    `;
+
+  elements.usersPagination.innerHTML = buildPagination(totalPages);
+}
+
+function buildPagination(totalPages) {
+  if (totalPages <= 1) {
+    return '';
+  }
+
+  let html = '';
+  for (let page = 1; page <= totalPages; page += 1) {
+    html += `
+      <button
+        class="page-button ${page === state.usersPage ? 'is-active' : ''}"
+        type="button"
+        data-page="${page}"
+      >
+        ${page}
+      </button>
+    `;
+  }
+
+  return html;
 }
 
 function fillSmtpForm(config) {

@@ -82,8 +82,8 @@ h3 {
 
 h1 {
   font-size: clamp(1.2rem, 2vw, 1.85rem);
-  max-width: 12ch;
-  white-space: normal;
+  max-width: none;
+  white-space: nowrap;
   line-height: 1.06;
 }
 
@@ -257,6 +257,16 @@ textarea {
   color: var(--danger);
 }
 
+.button--danger-soft {
+  background: rgba(141, 31, 44, 0.12);
+  color: var(--danger);
+}
+
+.button--small {
+  padding: 9px 12px;
+  font-size: 0.85rem;
+}
+
 .hint,
 .message {
   margin: 0;
@@ -281,13 +291,44 @@ textarea {
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  align-items: end;
+  align-items: center;
   margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.dashboard__intro {
+  min-width: 220px;
+}
+
+.dashboard__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .dashboard__actions {
   display: flex;
   gap: 10px;
+  margin-left: auto;
+}
+
+.section-tab {
+  appearance: none;
+  border: 1px solid rgba(47, 122, 78, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.64);
+  color: var(--muted);
+  padding: 11px 16px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.section-tab.is-active {
+  background: linear-gradient(135deg, rgba(63, 146, 95, 0.18), rgba(39, 104, 68, 0.14));
+  color: var(--accent-dark);
+  border-color: rgba(47, 122, 78, 0.2);
 }
 
 .stats {
@@ -301,7 +342,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
-  background: rgba(255, 250, 241, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(244, 251, 245, 0.9));
   box-shadow: var(--shadow);
 }
 
@@ -320,6 +361,26 @@ textarea {
 
 .panel--wide {
   grid-column: span 2;
+}
+
+.panel--accent {
+  background: linear-gradient(180deg, rgba(247, 255, 249, 0.92), rgba(239, 250, 242, 0.88));
+}
+
+.section-view {
+  display: block;
+}
+
+.section-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.section-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
 }
 
 .split,
@@ -347,11 +408,15 @@ textarea {
   gap: 12px;
 }
 
+.list--cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .card {
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.52);
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(244, 251, 246, 0.92));
 }
 
 .card__top {
@@ -383,9 +448,100 @@ textarea {
   align-items: center;
   border-radius: 999px;
   padding: 7px 10px;
-  background: rgba(31, 26, 22, 0.08);
-  color: var(--text);
+  background: rgba(47, 122, 78, 0.1);
+  color: var(--accent-dark);
   white-space: nowrap;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 280px));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(41, 87, 63, 0.1);
+}
+
+.data-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(47, 122, 78, 0.04);
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.status-dot::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-dot.is-active {
+  color: #2b7a50;
+}
+
+.status-dot.is-inactive {
+  color: #8b7c72;
+}
+
+.table-pagination {
+  display: flex;
+  justify-content: end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.page-button {
+  appearance: none;
+  border: 1px solid rgba(47, 122, 78, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--muted);
+  min-width: 38px;
+  height: 38px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.page-button.is-active {
+  background: rgba(47, 122, 78, 0.14);
+  color: var(--accent-dark);
+  border-color: rgba(47, 122, 78, 0.2);
 }
 
 .empty {
@@ -418,6 +574,14 @@ textarea {
   .stats,
   .split,
   .triple {
+    grid-template-columns: 1fr;
+  }
+
+  .list--cards {
+    grid-template-columns: 1fr;
+  }
+
+  .table-toolbar {
     grid-template-columns: 1fr;
   }
 

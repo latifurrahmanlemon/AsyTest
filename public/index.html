@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="shell">
-      <section class="hero">
+      <section id="hero-section" class="hero">
         <div class="hero__copy">
           <p class="eyebrow">AsyTest</p>
           <h1>Async Email Control Room</h1>
@@ -130,11 +130,37 @@
 
       <section id="dashboard" class="dashboard hidden">
         <header class="dashboard__header">
-          <div>
+          <div class="dashboard__intro">
             <p class="eyebrow">Control Room</p>
             <h2 id="welcome-title">Welcome</h2>
             <p id="welcome-subtitle" class="lead lead--small"></p>
           </div>
+          <nav id="dashboard-nav" class="dashboard__nav">
+            <button
+              id="nav-dashboard"
+              class="section-tab is-active"
+              type="button"
+              data-section="dashboard"
+            >
+              Dashboard
+            </button>
+            <button
+              id="nav-users"
+              class="section-tab"
+              type="button"
+              data-section="users"
+            >
+              User Management
+            </button>
+            <button
+              id="nav-settings"
+              class="section-tab"
+              type="button"
+              data-section="settings"
+            >
+              Settings
+            </button>
+          </nav>
           <div class="dashboard__actions">
             <button id="refresh-button" class="button button--ghost" type="button">
               Refresh
@@ -145,36 +171,145 @@
           </div>
         </header>
 
-        <div class="stats" id="stats"></div>
+        <section
+          id="section-dashboard"
+          class="section-view"
+          data-section-panel="dashboard"
+        >
+          <div class="stats" id="stats"></div>
 
-        <div class="grid">
+          <div class="grid">
+            <section class="panel panel--accent">
+              <div class="panel__header">
+                <p class="eyebrow">Dashboard</p>
+                <h3>Email Testing</h3>
+                <p class="section-note">
+                  Queue a test mail and monitor its delivery state from the job feed.
+                </p>
+              </div>
+              <form id="job-form" class="stack">
+                <label class="field">
+                  <span>To Email</span>
+                  <input name="to" type="email" required />
+                </label>
+                <label class="field">
+                  <span>Subject</span>
+                  <input name="subject" type="text" required />
+                </label>
+                <label class="field">
+                  <span>Body</span>
+                  <textarea name="body" rows="5" required></textarea>
+                </label>
+                <button class="button button--primary" type="submit">Send Test Email</button>
+                <p id="job-message" class="message" role="status"></p>
+              </form>
+            </section>
+
+            <section class="panel panel--wide">
+              <div class="panel__header">
+                <p class="eyebrow">Activity</p>
+                <h3>Recent Email Jobs</h3>
+                <p class="section-note">
+                  Latest jobs for this tenant with current queue status and timestamps.
+                </p>
+              </div>
+              <div id="jobs-list" class="list list--cards"></div>
+            </section>
+          </div>
+        </section>
+
+        <section
+          id="section-users"
+          class="section-view hidden"
+          data-section-panel="users"
+        >
+          <div id="users-panel" class="stack section-stack">
+            <section class="panel">
+              <div class="panel__header">
+                <p class="eyebrow">Tenant Access</p>
+                <h3>User Management</h3>
+                <p class="section-note">
+                  Create tenant users and review everyone with their assigned roles.
+                </p>
+              </div>
+
+              <form id="user-form" class="stack stack--compact">
+                <div class="triple">
+                  <label class="field">
+                    <span>Full Name</span>
+                    <input name="fullName" type="text" required />
+                  </label>
+                  <label class="field">
+                    <span>Email</span>
+                    <input name="email" type="email" required />
+                  </label>
+                  <label class="field">
+                    <span>Password</span>
+                    <input name="password" type="password" minlength="8" required />
+                  </label>
+                </div>
+                <div class="split split--actions">
+                  <label class="field">
+                    <span>Role</span>
+                    <select name="role">
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <div class="field field--actions">
+                    <span>Create User</span>
+                    <button class="button button--primary" type="submit">Add User</button>
+                  </div>
+                </div>
+                <p id="user-message" class="message" role="status"></p>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel__header">
+                <p class="eyebrow">Directory</p>
+                <h3>All Tenant Users</h3>
+              </div>
+              <div class="table-toolbar">
+                <label class="field">
+                  <span>Search Users</span>
+                  <input
+                    id="users-search"
+                    type="search"
+                    placeholder="Search by name or email"
+                  />
+                </label>
+                <label class="field">
+                  <span>Sort By</span>
+                  <select id="users-sort">
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                    <option value="email-asc">Email A-Z</option>
+                    <option value="email-desc">Email Z-A</option>
+                    <option value="role-asc">Role</option>
+                    <option value="status-desc">Active First</option>
+                    <option value="status-asc">Inactive First</option>
+                  </select>
+                </label>
+              </div>
+              <div id="users-list" class="table-wrap"></div>
+              <div id="users-pagination" class="table-pagination"></div>
+            </section>
+          </div>
+        </section>
+
+        <section
+          id="section-settings"
+          class="section-view hidden"
+          data-section-panel="settings"
+        >
           <section class="panel">
             <div class="panel__header">
-              <p class="eyebrow">Queue</p>
-              <h3>Create Email Job</h3>
-            </div>
-            <form id="job-form" class="stack">
-              <label class="field">
-                <span>To Email</span>
-                <input name="to" type="email" required />
-              </label>
-              <label class="field">
-                <span>Subject</span>
-                <input name="subject" type="text" required />
-              </label>
-              <label class="field">
-                <span>Body</span>
-                <textarea name="body" rows="5" required></textarea>
-              </label>
-              <button class="button button--primary" type="submit">Queue Email</button>
-              <p id="job-message" class="message" role="status"></p>
-            </form>
-          </section>
-
-          <section class="panel">
-            <div class="panel__header">
-              <p class="eyebrow">SMTP</p>
+              <p class="eyebrow">Settings</p>
               <h3>SMTP Configuration</h3>
+              <p class="section-note">
+                Configure the tenant mail transport used by async email jobs.
+              </p>
             </div>
             <form id="smtp-form" class="stack">
               <label class="field">
@@ -216,55 +351,7 @@
               <p id="smtp-message" class="message" role="status"></p>
             </form>
           </section>
-
-          <section class="panel panel--wide">
-            <div class="panel__header">
-              <p class="eyebrow">Jobs</p>
-              <h3>Recent Email Jobs</h3>
-            </div>
-            <div id="jobs-list" class="list"></div>
-          </section>
-
-          <section class="panel panel--wide" id="users-panel">
-            <div class="panel__header">
-              <p class="eyebrow">Tenant</p>
-              <h3>User Management</h3>
-            </div>
-
-            <form id="user-form" class="stack stack--compact">
-              <div class="triple">
-                <label class="field">
-                  <span>Full Name</span>
-                  <input name="fullName" type="text" required />
-                </label>
-                <label class="field">
-                  <span>Email</span>
-                  <input name="email" type="email" required />
-                </label>
-                <label class="field">
-                  <span>Password</span>
-                  <input name="password" type="password" minlength="8" required />
-                </label>
-              </div>
-              <div class="split">
-                <label class="field">
-                  <span>Role</span>
-                  <select name="role">
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </label>
-                <div class="field field--actions">
-                  <span>Create User</span>
-                  <button class="button button--primary" type="submit">Add User</button>
-                </div>
-              </div>
-              <p id="user-message" class="message" role="status"></p>
-            </form>
-
-            <div id="users-list" class="list"></div>
-          </section>
-        </div>
+        </section>
       </section>
     </div>
 

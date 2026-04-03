@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -53,5 +54,13 @@ export class UsersController {
     @Body() payload: UpdateUserStatusDto,
   ) {
     return this.usersService.updateTenantUserStatus(currentUser, userId, payload);
+  }
+
+  @Delete(':userId')
+  deleteUser(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('userId') userId: string,
+  ) {
+    return this.usersService.deleteTenantUser(currentUser, userId);
   }
 }

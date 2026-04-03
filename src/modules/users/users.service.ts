@@ -169,6 +169,41 @@ export class UsersService {
     return this.toPublicUser(user);
   }
 
+  async deleteTenantUser(
+    currentUser: RequestUser,
+    targetUserId: string,
+  ): Promise<{ message: string }> {
+    const user = await this.getTenantUserOrThrow(currentUser.tenantId, targetUserId);
+
+    if (user.id === currentUser.userId) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    if (
+      user.role === UserRole.ADMIN &&
+      user.isActive &&
+      (await this.countActiveAdmins(currentUser.tenantId)) <= 1
+    ) {
+      throw new BadRequestException('A tenant must always have at least one active admin');
+    }
+
+    await this.userRepository.remove(user);
+
+    await this.auditLogService.record({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.userId,
+      level: 'warn',
+      event: 'users.deleted',
+      resourceType: 'user',
+      resourceId: user.id,
+      message: `User ${user.email} was deleted`,
+    });
+
+    return {
+      message: 'User deleted successfully',
+    };
+  }
+
   async getTenantUserOrThrow(tenantId: string, userId: string): Promise<UserEntity> {
     const user = await this.userRepository.findOne({
       where: { id: userId, tenantId },

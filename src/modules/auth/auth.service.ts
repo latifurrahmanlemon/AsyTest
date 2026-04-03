@@ -59,7 +59,7 @@ export class AuthService {
       fullName: payload.fullName.trim(),
       email: payload.email.toLowerCase().trim(),
       passwordHash: await hash(payload.password, 10),
-      role: UserRole.ADMIN,
+      role: UserRole.USER,
       isActive: true,
       emailVerifiedAt: null,
       emailVerificationCodeHash: null,
@@ -76,10 +76,11 @@ export class AuthService {
       event: 'auth.signup.pending_verification',
       resourceType: 'user',
       resourceId: user.id,
-      message: `Tenant ${tenant.name} created and waiting for OTP verification`,
+      message: `User ${user.email} created and waiting for OTP verification`,
       metadata: {
         email: user.email,
         role: user.role,
+        tenantName: tenant.name,
       },
     });
 
