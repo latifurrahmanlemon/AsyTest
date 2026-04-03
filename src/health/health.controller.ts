@@ -3,11 +3,10 @@ import { Controller, Get } from '@nestjs/common';
 @Controller()
 export class HealthController {
   @Get()
-  getRoot(): Record<string, string> {
+  getRoot(): { message: string; health: string } {
     return {
-      name: 'async-email-control-room',
-      status: 'ok',
-      mode: 'api',
+      message: 'Async Email Control Room API is running',
+      health: '/health',
     };
   }
 

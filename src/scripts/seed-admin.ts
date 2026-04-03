@@ -19,6 +19,12 @@ function readRequiredEnv(name: string): string {
   return value;
 }
 
+function readEnvWithDefault(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+
+  return value || fallback;
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -44,9 +50,9 @@ async function ensureUniqueTenantSlug(
 }
 
 async function run(): Promise<void> {
-  const email = readRequiredEnv('SEED_ADMIN_EMAIL').toLowerCase();
-  const password = readRequiredEnv('SEED_ADMIN_PASSWORD');
-  const fullName = process.env.SEED_ADMIN_FULL_NAME?.trim() || 'Administrator';
+  const email = readEnvWithDefault('SEED_ADMIN_EMAIL', 'admin@admin.com').toLowerCase();
+  const password = readEnvWithDefault('SEED_ADMIN_PASSWORD', 'password');
+  const fullName = process.env.SEED_ADMIN_FULL_NAME?.trim() || 'Admin';
   const tenantName = process.env.SEED_TENANT_NAME?.trim() || 'Default Tenant';
   const requestedTenantSlug =
     process.env.SEED_TENANT_SLUG?.trim() || slugify(tenantName);

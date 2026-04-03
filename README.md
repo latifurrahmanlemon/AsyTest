@@ -175,15 +175,17 @@ npm run db:migration:generate -- src/database/migrations/AddSomething
 
 ### Seed an admin user
 
-Provide these environment variables before running the seed:
+Default seeded admin credentials:
 
 ```env
-SEED_ADMIN_EMAIL=admin@example.com
-SEED_ADMIN_PASSWORD=SuperSecret123
-SEED_ADMIN_FULL_NAME=System Admin
+SEED_ADMIN_EMAIL=admin@admin.com
+SEED_ADMIN_PASSWORD=password
+SEED_ADMIN_FULL_NAME=Admin
 SEED_TENANT_NAME=Default Tenant
 SEED_TENANT_SLUG=default-tenant
 ```
+
+If you do not pass `SEED_ADMIN_EMAIL` or `SEED_ADMIN_PASSWORD`, the seeder now uses those default values automatically.
 
 Run locally with TypeScript:
 
