@@ -34,7 +34,7 @@ export class SmtpConfigEntity {
   @Column({ default: false })
   secure!: boolean;
 
-  @Column({ length: 190, nullable: true })
+  @Column({ type: 'varchar', length: 190, nullable: true })
   username!: string | null;
 
   @Column({ type: 'text', nullable: true })
@@ -43,7 +43,7 @@ export class SmtpConfigEntity {
   @Column({ length: 190 })
   fromEmail!: string;
 
-  @Column({ length: 120, nullable: true })
+  @Column({ type: 'varchar', length: 120, nullable: true })
   fromName!: string | null;
 
   @CreateDateColumn()

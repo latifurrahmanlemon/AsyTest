@@ -57,7 +57,7 @@ export class EmailJobEntity {
   @Column({ type: 'text', nullable: true })
   lastError!: string | null;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   providerMessageId!: string | null;
 
   @Column({ type: 'text', nullable: true })

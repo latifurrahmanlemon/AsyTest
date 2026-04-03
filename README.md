@@ -141,6 +141,70 @@ npm run build
 npm run start:prod
 ```
 
+## Database Schema And Admin Seeder
+
+This project now supports TypeORM migrations through a shared data source file at `src/database/data-source.ts`.
+
+### Run migrations
+
+For local development:
+
+```bash
+npm run db:migration:run
+```
+
+For production, after pulling the latest code:
+
+```bash
+npm install
+npm run db:migration:run
+npm run build
+npm run start:prod
+```
+
+Useful migration commands:
+
+```bash
+npm run db:migration:show
+npm run db:migration:revert
+npm run db:migration:create -- src/database/migrations/AddSomething
+npm run db:migration:generate -- src/database/migrations/AddSomething
+```
+
+`DB_SYNCHRONIZE` should stay `false` in production once you are using migrations.
+
+### Seed an admin user
+
+Provide these environment variables before running the seed:
+
+```env
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=SuperSecret123
+SEED_ADMIN_FULL_NAME=System Admin
+SEED_TENANT_NAME=Default Tenant
+SEED_TENANT_SLUG=default-tenant
+```
+
+Run locally with TypeScript:
+
+```bash
+npm run db:seed:admin
+```
+
+Run on a production server after build:
+
+```bash
+npm run db:migration:run
+npm run build
+npm run db:seed:admin:prod
+```
+
+The seed is idempotent:
+
+- if the tenant does not exist, it is created
+- if the admin user does not exist, it is created
+- if the admin user already exists, its password, role, active status, and tenant assignment are updated
+
 ## Main API Endpoints
 
 ### Public auth

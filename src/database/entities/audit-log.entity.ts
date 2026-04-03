@@ -14,7 +14,7 @@ export class AuditLogEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ length: 36, nullable: true })
+  @Column({ type: 'varchar', length: 36, nullable: true })
   tenantId!: string | null;
 
   @ManyToOne(() => TenantEntity, (tenant) => tenant.auditLogs, {
@@ -24,7 +24,7 @@ export class AuditLogEntity {
   @JoinColumn({ name: 'tenantId' })
   tenant!: TenantEntity | null;
 
-  @Column({ length: 36, nullable: true })
+  @Column({ type: 'varchar', length: 36, nullable: true })
   userId!: string | null;
 
   @ManyToOne(() => UserEntity, (user) => user.auditLogs, {
@@ -40,10 +40,10 @@ export class AuditLogEntity {
   @Column({ length: 120 })
   event!: string;
 
-  @Column({ length: 80, nullable: true })
+  @Column({ type: 'varchar', length: 80, nullable: true })
   resourceType!: string | null;
 
-  @Column({ length: 120, nullable: true })
+  @Column({ type: 'varchar', length: 120, nullable: true })
   resourceId!: string | null;
 
   @Column({ type: 'text' })

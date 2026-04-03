@@ -9,6 +9,13 @@
   },
   "scripts": {
     "build": "nest build",
+    "db:migration:create": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:create",
+    "db:migration:generate": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:generate",
+    "db:migration:run": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:run",
+    "db:migration:revert": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:revert",
+    "db:migration:show": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:show",
+    "db:seed:admin": "ts-node src/scripts/seed-admin.ts",
+    "db:seed:admin:prod": "node dist/scripts/seed-admin.js",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
