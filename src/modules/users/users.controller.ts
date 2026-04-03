@@ -15,6 +15,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UsersService } from './users.service';
@@ -54,6 +55,15 @@ export class UsersController {
     @Body() payload: UpdateUserStatusDto,
   ) {
     return this.usersService.updateTenantUserStatus(currentUser, userId, payload);
+  }
+
+  @Patch(':userId')
+  updateUser(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('userId') userId: string,
+    @Body() payload: UpdateUserDto,
+  ) {
+    return this.usersService.updateTenantUser(currentUser, userId, payload);
   }
 
   @Delete(':userId')

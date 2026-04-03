@@ -60,7 +60,8 @@ body {
   padding: 44px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .eyebrow {
@@ -161,6 +162,13 @@ h3 {
 
 .panel__header {
   margin-bottom: 18px;
+}
+
+.panel__header--split {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
 }
 
 .stack {
@@ -314,21 +322,19 @@ textarea {
 }
 
 .section-tab {
-  appearance: none;
-  border: 1px solid rgba(47, 122, 78, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.64);
-  color: var(--muted);
-  padding: 11px 16px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+  min-height: 46px;
+  padding: 11px 18px;
+  border: 1px solid rgba(47, 122, 78, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgba(26, 62, 39, 0.08);
 }
 
 .section-tab.is-active {
-  background: linear-gradient(135deg, rgba(63, 146, 95, 0.18), rgba(39, 104, 68, 0.14));
-  color: var(--accent-dark);
-  border-color: rgba(47, 122, 78, 0.2);
+  background: linear-gradient(135deg, #3f925f, #276844);
+  color: #f5fff8;
+  border-color: rgba(39, 104, 68, 0.35);
+  box-shadow: 0 14px 34px rgba(39, 104, 68, 0.22);
 }
 
 .stats {
@@ -525,6 +531,26 @@ textarea {
   margin-top: 18px;
 }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 39, 25, 0.34);
+  backdrop-filter: blur(6px);
+}
+
+.modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(920px, calc(100% - 32px));
+  margin: 72px auto;
+}
+
 .page-button {
   appearance: none;
   border: 1px solid rgba(47, 122, 78, 0.12);
@@ -583,6 +609,10 @@ textarea {
 
   .table-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .panel__header--split {
+    flex-direction: column;
   }
 
   .panel--wide {

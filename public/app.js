@@ -45,7 +45,17 @@ const elements = {
   usersSort: document.getElementById('users-sort'),
   usersPagination: document.getElementById('users-pagination'),
   usersPanel: document.getElementById('users-panel'),
+  openUserModal: document.getElementById('open-user-modal'),
+  closeUserModal: document.getElementById('close-user-modal'),
+  userModal: document.getElementById('user-modal'),
+  userModalBackdrop: document.getElementById('user-modal-backdrop'),
   userForm: document.getElementById('user-form'),
+  userFormMode: document.getElementById('user-form-mode'),
+  userFormUserId: document.getElementById('user-form-user-id'),
+  userFormHelper: document.getElementById('user-form-helper'),
+  saveUserButton: document.getElementById('save-user-button'),
+  userPasswordInput: document.getElementById('user-password-input'),
+  userModalTitle: document.getElementById('user-modal-title'),
   userMessage: document.getElementById('user-message'),
   jobForm: document.getElementById('job-form'),
   jobMessage: document.getElementById('job-message'),
@@ -66,6 +76,9 @@ function boot() {
     return;
   }
 
+  elements.heroSection.classList.add('hidden');
+  elements.authPanel.classList.add('hidden');
+  elements.dashboard.classList.remove('hidden');
   hydrateDashboard().catch(() => renderLoggedOut());
 }
 
@@ -75,6 +88,14 @@ function bindEvents() {
   });
   elements.sectionTabs.forEach((button) => {
     button.addEventListener('click', () => setSection(button.dataset.section));
+  });
+  elements.dashboardNav.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-section]');
+    if (!button) {
+      return;
+    }
+
+    setSection(button.dataset.section);
   });
 
   elements.loginForm.addEventListener('submit', handleLogin);
@@ -87,12 +108,16 @@ function bindEvents() {
   elements.refreshButton.addEventListener('click', () => hydrateDashboard());
   elements.jobForm.addEventListener('submit', handleCreateJob);
   elements.userForm.addEventListener('submit', handleCreateUser);
+  elements.openUserModal.addEventListener('click', openUserModal);
+  elements.closeUserModal.addEventListener('click', closeUserModal);
+  elements.userModalBackdrop.addEventListener('click', closeUserModal);
   elements.usersSearch.addEventListener('input', handleUserSearch);
   elements.usersSort.addEventListener('change', handleUserSort);
   elements.usersList.addEventListener('click', handleUsersTableClick);
   elements.usersPagination.addEventListener('click', handleUsersTableClick);
   elements.smtpForm.addEventListener('submit', handleSaveSmtp);
   elements.smtpTestButton.addEventListener('click', handleTestSmtp);
+  document.addEventListener('keydown', handleEscape);
 }
 
 function setAuthView(view) {
@@ -150,6 +175,9 @@ async function handleLogin(event) {
     localStorage.setItem(tokenKey, response.accessToken);
     localStorage.setItem(userKey, JSON.stringify(response.user));
     setMessage(elements.loginMessage, 'Login successful.', 'success');
+    elements.heroSection.classList.add('hidden');
+    elements.authPanel.classList.add('hidden');
+    elements.dashboard.classList.remove('hidden');
     await hydrateDashboard();
   } catch (error) {
     setMessage(elements.loginMessage, error.message, 'error');
@@ -350,26 +378,106 @@ async function handleCreateJob(event) {
 
 async function handleCreateUser(event) {
   event.preventDefault();
-  setMessage(elements.userMessage, 'Creating user...');
+  const mode = elements.userFormMode.value;
+  setMessage(
+    elements.userMessage,
+    mode === 'edit' ? 'Updating user...' : 'Creating user...',
+  );
 
   const formData = new FormData(elements.userForm);
+  const password = String(formData.get('password') || '');
+  const isActive = String(formData.get('isActive') || 'true') === 'true';
+
   const payload = {
     fullName: String(formData.get('fullName') || '').trim(),
     email: String(formData.get('email') || '').trim(),
-    password: String(formData.get('password') || ''),
     role: String(formData.get('role') || 'user'),
+    isActive,
   };
 
+  if (password) {
+    payload.password = password;
+  }
+
   try {
-    await api('/users', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    if (mode === 'edit') {
+      const userId = String(formData.get('userId') || '');
+      await api(`/users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await api('/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...payload,
+          password,
+        }),
+      });
+    }
+
     elements.userForm.reset();
-    setMessage(elements.userMessage, 'User created.', 'success');
+    setMessage(
+      elements.userMessage,
+      mode === 'edit' ? 'User updated.' : 'User created.',
+      'success',
+    );
     await refreshUsers();
+    closeUserModal();
   } catch (error) {
     setMessage(elements.userMessage, error.message, 'error');
+  }
+}
+
+function openUserModal() {
+  setUserModalMode('create');
+  elements.userModal.classList.remove('hidden');
+  elements.userModal.setAttribute('aria-hidden', 'false');
+}
+
+function openEditUserModal(userId) {
+  const user = state.users.find((item) => item.id === userId);
+  if (!user) {
+    return;
+  }
+
+  setUserModalMode('edit', user);
+  elements.userModal.classList.remove('hidden');
+  elements.userModal.setAttribute('aria-hidden', 'false');
+}
+
+function setUserModalMode(mode, user) {
+  elements.userFormMode.value = mode;
+  elements.userFormUserId.value = user?.id || '';
+  elements.userModalTitle.textContent = mode === 'edit' ? 'Edit User' : 'Add New User';
+  elements.userFormHelper.textContent = mode === 'edit' ? 'Update User' : 'Create User';
+  elements.saveUserButton.textContent = mode === 'edit' ? 'Update User' : 'Save User';
+  elements.userPasswordInput.required = mode !== 'edit';
+  elements.userPasswordInput.placeholder =
+    mode === 'edit' ? 'Leave blank to keep current password' : '';
+
+  elements.userForm.fullName.value = user?.fullName || '';
+  elements.userForm.email.value = user?.email || '';
+  elements.userForm.role.value = user?.role || 'user';
+  elements.userForm.isActive.value = String(user?.isActive ?? true);
+  elements.userPasswordInput.value = '';
+  setMessage(elements.userMessage, '');
+}
+
+function closeUserModal() {
+  elements.userModal.classList.add('hidden');
+  elements.userModal.setAttribute('aria-hidden', 'true');
+  elements.userForm.reset();
+  elements.userFormMode.value = 'create';
+  elements.userFormUserId.value = '';
+  elements.userPasswordInput.required = true;
+  elements.userPasswordInput.placeholder = '';
+  setMessage(elements.userMessage, '');
+}
+
+function handleEscape(event) {
+  if (event.key === 'Escape' && !elements.userModal.classList.contains('hidden')) {
+    closeUserModal();
   }
 }
 
@@ -447,6 +555,11 @@ async function handleUsersTableClick(event) {
       await api(`/users/${userId}`, {
         method: 'DELETE',
       });
+    }
+
+    if (action === 'edit-user') {
+      openEditUserModal(userId);
+      return;
     }
 
     await refreshUsers();
@@ -631,6 +744,14 @@ function renderUsers() {
             </td>
             <td>
               <div class="table-actions">
+                <button
+                  class="button button--small button--ghost"
+                  type="button"
+                  data-user-action="edit-user"
+                  data-user-id="${escapeHtml(user.id)}"
+                >
+                  Edit
+                </button>
                 <button
                   class="button button--small button--ghost"
                   type="button"

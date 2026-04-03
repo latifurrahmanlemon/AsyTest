@@ -138,7 +138,7 @@
           <nav id="dashboard-nav" class="dashboard__nav">
             <button
               id="nav-dashboard"
-              class="section-tab is-active"
+              class="button button--ghost section-tab is-active"
               type="button"
               data-section="dashboard"
             >
@@ -146,7 +146,7 @@
             </button>
             <button
               id="nav-users"
-              class="section-tab"
+              class="button button--ghost section-tab"
               type="button"
               data-section="users"
             >
@@ -154,7 +154,7 @@
             </button>
             <button
               id="nav-settings"
-              class="section-tab"
+              class="button button--ghost section-tab"
               type="button"
               data-section="settings"
             >
@@ -225,50 +225,14 @@
         >
           <div id="users-panel" class="stack section-stack">
             <section class="panel">
-              <div class="panel__header">
-                <p class="eyebrow">Tenant Access</p>
-                <h3>User Management</h3>
-                <p class="section-note">
-                  Create tenant users and review everyone with their assigned roles.
-                </p>
-              </div>
-
-              <form id="user-form" class="stack stack--compact">
-                <div class="triple">
-                  <label class="field">
-                    <span>Full Name</span>
-                    <input name="fullName" type="text" required />
-                  </label>
-                  <label class="field">
-                    <span>Email</span>
-                    <input name="email" type="email" required />
-                  </label>
-                  <label class="field">
-                    <span>Password</span>
-                    <input name="password" type="password" minlength="8" required />
-                  </label>
+              <div class="panel__header panel__header--split">
+                <div>
+                  <p class="eyebrow">Directory</p>
+                  <h3>All Tenant Users</h3>
                 </div>
-                <div class="split split--actions">
-                  <label class="field">
-                    <span>Role</span>
-                    <select name="role">
-                      <option value="user">User</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </label>
-                  <div class="field field--actions">
-                    <span>Create User</span>
-                    <button class="button button--primary" type="submit">Add User</button>
-                  </div>
-                </div>
-                <p id="user-message" class="message" role="status"></p>
-              </form>
-            </section>
-
-            <section class="panel">
-              <div class="panel__header">
-                <p class="eyebrow">Directory</p>
-                <h3>All Tenant Users</h3>
+                <button id="open-user-modal" class="button button--primary" type="button">
+                  Add New User
+                </button>
               </div>
               <div class="table-toolbar">
                 <label class="field">
@@ -353,6 +317,76 @@
           </section>
         </section>
       </section>
+    </div>
+
+    <div id="user-modal" class="modal hidden" aria-hidden="true">
+      <div id="user-modal-backdrop" class="modal__backdrop"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+        <div class="panel">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="eyebrow">Tenant Access</p>
+              <h3 id="user-modal-title">Add New User</h3>
+              <p class="section-note">
+                Create a new tenant user or edit an existing user without leaving the directory view.
+              </p>
+            </div>
+            <button id="close-user-modal" class="button button--ghost" type="button">
+              Close
+            </button>
+          </div>
+
+          <form id="user-form" class="stack stack--compact">
+            <input id="user-form-mode" name="mode" type="hidden" value="create" />
+            <input id="user-form-user-id" name="userId" type="hidden" value="" />
+            <div class="split">
+              <label class="field">
+                <span>Full Name</span>
+                <input name="fullName" type="text" required />
+              </label>
+              <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" required />
+              </label>
+            </div>
+            <div class="split split--actions">
+              <label class="field">
+                <span>Role</span>
+                <select name="role">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Status</span>
+                <select name="isActive">
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">
+              <span>Password</span>
+              <input
+                id="user-password-input"
+                name="password"
+                type="password"
+                minlength="8"
+                required
+              />
+            </label>
+            <div class="split split--actions">
+              <div class="field field--actions">
+                <span id="user-form-helper">Create User</span>
+                <button id="save-user-button" class="button button--primary" type="submit">
+                  Save User
+                </button>
+              </div>
+            </div>
+            <p id="user-message" class="message" role="status"></p>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script src="/app.js"></script>

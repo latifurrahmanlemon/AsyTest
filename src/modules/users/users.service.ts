@@ -11,6 +11,7 @@ import { UserRole } from '../../common/auth/role.enum';
 import { UserEntity } from '../../database/entities/user.entity';
 import { AuditLogService } from '../observability/audit-log.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 
@@ -164,6 +165,86 @@ export class UsersService {
       resourceType: 'user',
       resourceId: user.id,
       message: `User ${user.email} active state changed to ${user.isActive}`,
+    });
+
+    return this.toPublicUser(user);
+  }
+
+  async updateTenantUser(
+    currentUser: RequestUser,
+    targetUserId: string,
+    payload: UpdateUserDto,
+  ): Promise<{
+    id: string;
+    tenantId: string;
+    fullName: string;
+    email: string;
+    role: UserRole;
+    isActive: boolean;
+  }> {
+    const user = await this.getTenantUserOrThrow(currentUser.tenantId, targetUserId);
+
+    if (payload.email) {
+      const normalizedEmail = payload.email.toLowerCase().trim();
+      const existingUser = await this.userRepository.findOne({
+        where: { email: normalizedEmail },
+      });
+
+      if (existingUser && existingUser.id !== user.id) {
+        throw new BadRequestException('A user with this email already exists');
+      }
+
+      user.email = normalizedEmail;
+    }
+
+    if (payload.fullName) {
+      user.fullName = payload.fullName.trim();
+    }
+
+    if (payload.password) {
+      user.passwordHash = await hash(payload.password, 10);
+    }
+
+    if (typeof payload.role !== 'undefined') {
+      if (
+        user.role === UserRole.ADMIN &&
+        payload.role !== UserRole.ADMIN &&
+        (await this.countActiveAdmins(currentUser.tenantId)) <= 1 &&
+        user.isActive
+      ) {
+        throw new BadRequestException('A tenant must always have at least one active admin');
+      }
+
+      user.role = payload.role;
+    }
+
+    if (typeof payload.isActive !== 'undefined') {
+      if (
+        user.role === UserRole.ADMIN &&
+        user.isActive &&
+        !payload.isActive &&
+        (await this.countActiveAdmins(currentUser.tenantId)) <= 1
+      ) {
+        throw new BadRequestException('A tenant must always have at least one active admin');
+      }
+
+      user.isActive = payload.isActive;
+    }
+
+    await this.userRepository.save(user);
+
+    await this.auditLogService.record({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.userId,
+      level: 'warn',
+      event: 'users.updated',
+      resourceType: 'user',
+      resourceId: user.id,
+      message: `User ${user.email} was updated`,
+      metadata: {
+        role: user.role,
+        isActive: user.isActive,
+      },
     });
 
     return this.toPublicUser(user);
