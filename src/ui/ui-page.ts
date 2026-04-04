@@ -38,6 +38,9 @@ export const uiPage = String.raw`<!doctype html>
     .modeCard b{display:block;margin-bottom:6px}
     .simBox{padding:14px;border:1px solid #fed7aa;border-radius:14px;background:#fff7ed}
     .simBox h3{margin:0 0 6px}
+    .queueBox{padding:14px;border:1px solid #dbe7ff;border-radius:14px;background:#f8fbff}
+    .queueBox h3{margin:0 0 6px}
+    .field small{color:var(--muted)}
     .actionHint{padding:10px 12px;background:#f8fbff;border:1px solid #dbe7ff;border-radius:12px;color:#31518d;margin-bottom:12px}
     .timeline{display:grid;gap:10px}.timeline .card{border-left:4px solid #bfdbfe}
     .kv{display:grid;grid-template-columns:180px 1fr;gap:8px 12px}.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px}
@@ -195,9 +198,25 @@ export const uiPage = String.raw`<!doctype html>
             </label>
           </div>
         </div>
+        <div class="queueBox">
+          <h3>Queue Retry Controls</h3>
+          <p class="sub" style="margin:0 0 12px">Set how many total tries the queue should make and the base retry delay used for exponential backoff.</p>
+          <div class="two">
+            <div class="field">
+              <label>Total Queue Attempts</label>
+              <input name="maxAttempts" type="number" min="1" max="10" value="3" />
+              <small>Example: 3 means first try + 2 retries.</small>
+            </div>
+            <div class="field">
+              <label>Retry Base Delay (ms)</label>
+              <input name="retryBaseDelayMs" type="number" min="100" max="60000" value="1000" />
+              <small>Retry timing becomes 1000ms, 2000ms, 4000ms and so on.</small>
+            </div>
+          </div>
+        </div>
         <div id="simulateFields" class="simBox hidden">
           <h3>Simulator Testing Options</h3>
-          <p class="sub" style="margin:0 0 12px">This section brings back the old simulation behavior from the earlier version of the project.</p>
+          <p class="sub" style="margin:0 0 12px">Use this mode when you want to understand retry and failed queue behavior clearly.</p>
           <div class="three">
             <div class="field"><label>Simulated Fail Attempts</label><input name="failAttempts" type="number" min="1" max="10" value="3" /></div>
             <div class="field"><label>Processing Delay (ms)</label><input name="processingDelayMs" type="number" min="0" max="30000" value="100" /></div>
@@ -257,7 +276,7 @@ export const uiPage = String.raw`<!doctype html>
     els.openRunModalBtn.addEventListener('click',()=>{syncModeUi();openModal('runModalWrap');});
     document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',syncModeUi));
     document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',()=>closeModal(btn.dataset.closeModal)));
-    els.runForm.addEventListener('submit',async e=>{e.preventDefault();const mode=currentRunMode();const payload={to:els.runForm.to.value,subject:els.runForm.subject.value,body:els.runForm.body.value};if(mode==='simulate-fail'){payload.simulate={failAttempts:Number(els.runForm.failAttempts.value||3),processingDelayMs:Number(els.runForm.processingDelayMs.value||100)};}try{await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});showToast(els.historyToast,mode==='simulate-fail'?'Simulation failure test queued.':'Real email test queued.','ok');closeModal('runModalWrap');els.runForm.reset();document.querySelector('input[name="mode"][value="real"]').checked=true;syncModeUi();await refreshDashboard();}catch(error){showToast(els.runToast,error.message,'error');}});
+    els.runForm.addEventListener('submit',async e=>{e.preventDefault();const mode=currentRunMode();const payload={to:els.runForm.to.value,subject:els.runForm.subject.value,body:els.runForm.body.value};const maxAttempts=Number(els.runForm.maxAttempts.value||3);const retryBaseDelayMs=Number(els.runForm.retryBaseDelayMs.value||1000);if(mode==='simulate-fail'){payload.simulate={failAttempts:Number(els.runForm.failAttempts.value||3),processingDelayMs:Number(els.runForm.processingDelayMs.value||100),maxAttempts,retryBaseDelayMs};}else{payload.simulate={maxAttempts,retryBaseDelayMs};}try{await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});showToast(els.historyToast,mode==='simulate-fail'?'Simulation failure test queued.':'Real email test queued.','ok');closeModal('runModalWrap');els.runForm.reset();els.runForm.maxAttempts.value='3';els.runForm.retryBaseDelayMs.value='1000';els.runForm.failAttempts.value='3';els.runForm.processingDelayMs.value='100';document.querySelector('input[name="mode"][value="real"]').checked=true;syncModeUi();await refreshDashboard();}catch(error){showToast(els.runToast,error.message,'error');}});
     els.smtpForm.addEventListener('submit',async e=>{e.preventDefault();try{await api('/smtp-config',{method:'PUT',body:JSON.stringify({host:els.smtpForm.host.value,port:Number(els.smtpForm.port.value),username:els.smtpForm.username.value||undefined,password:els.smtpForm.password.value||undefined,fromEmail:els.smtpForm.fromEmail.value,fromName:els.smtpForm.fromName.value||undefined,secure:$('smtpSecure').checked})});showToast(els.historyToast,'SMTP updated successfully.','ok');await refreshDashboard();}catch(error){showToast(els.historyToast,error.message,'error');}});
     els.testSmtpBtn.addEventListener('click',async()=>{try{await api('/smtp-config/test',{method:'POST'});showToast(els.historyToast,'SMTP connection verified.','ok');}catch(error){showToast(els.historyToast,error.message,'error');}});
     (async()=>{syncModeUi();if(state.token){try{await refreshDashboard();}catch(error){localStorage.removeItem('asytest_token');state.token='';setAuthUi();}}else{setAuthUi();renderHistory();}})();

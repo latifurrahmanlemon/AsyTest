@@ -39,6 +39,8 @@ export class JobsService {
     const smtpConfig = await this.smtpService.getDecryptedConfigForTenant(
       currentUser.tenantId,
     );
+    const effectiveMaxAttempts = this.resolveMaxAttempts(payload);
+    const effectiveRetryBaseDelayMs = this.resolveRetryBaseDelayMs(payload);
     const emailJob = this.emailJobRepository.create({
       tenantId: currentUser.tenantId,
       createdByUserId: currentUser.userId,
@@ -47,7 +49,7 @@ export class JobsService {
       body: payload.body,
       status: 'queued',
       attemptsMade: 0,
-      maxAttempts: this.maxAttempts,
+      maxAttempts: effectiveMaxAttempts,
       nextRunAt: null,
       lastError: null,
       providerMessageId: null,
@@ -63,7 +65,12 @@ export class JobsService {
         fromName: smtpConfig.fromName,
         updatedAt: smtpConfig.updatedAt,
       }),
-      metadataJson: payload.simulate ? JSON.stringify({ simulate: payload.simulate }) : null,
+      metadataJson: JSON.stringify({
+        simulate: payload.simulate ?? null,
+        queue: {
+          retryBaseDelayMs: effectiveRetryBaseDelayMs,
+        },
+      }),
     });
     await this.emailJobRepository.save(emailJob);
 
@@ -97,10 +104,10 @@ export class JobsService {
       },
       {
         jobId: emailJob.id,
-        attempts: this.maxAttempts,
+        attempts: effectiveMaxAttempts,
         backoff: {
           type: 'exponential',
-          delay: this.retryBaseDelayMs,
+          delay: effectiveRetryBaseDelayMs,
         },
         removeOnComplete: 500,
         removeOnFail: 500,
@@ -225,6 +232,14 @@ export class JobsService {
         createdAt: item.createdAt.toISOString(),
       })),
     };
+  }
+
+  private resolveMaxAttempts(payload: CreateEmailJobDto): number {
+    return payload.simulate?.maxAttempts ?? this.maxAttempts;
+  }
+
+  private resolveRetryBaseDelayMs(payload: CreateEmailJobDto): number {
+    return payload.simulate?.retryBaseDelayMs ?? this.retryBaseDelayMs;
   }
 
   private readPositiveInteger(rawValue: string | undefined, fallback: number): number {

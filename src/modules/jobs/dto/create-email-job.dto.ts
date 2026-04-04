@@ -25,6 +25,20 @@ class EmailJobSimulationDto {
   @Min(0)
   @Max(30000)
   processingDelayMs?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  maxAttempts?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(100)
+  @Max(60000)
+  retryBaseDelayMs?: number;
 }
 
 export class CreateEmailJobDto {

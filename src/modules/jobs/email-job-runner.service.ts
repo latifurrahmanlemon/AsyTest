@@ -12,10 +12,6 @@ import { EmailQueuePayload, EmailJobStatus } from './jobs.types';
 @Injectable()
 export class EmailJobRunnerService {
   private readonly logger = new Logger(EmailJobRunnerService.name);
-  private readonly maxAttempts = this.readPositiveInteger(
-    process.env.MAX_JOB_ATTEMPTS,
-    3,
-  );
   private readonly retryBaseDelayMs = this.readPositiveInteger(
     process.env.RETRY_BASE_DELAY_MS,
     1000,
@@ -102,12 +98,13 @@ export class EmailJobRunnerService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown job processing error';
+      const retryBaseDelayMs = this.resolveRetryBaseDelayMs(emailJob);
       const nextRunAt =
-        attempt < this.maxAttempts
-          ? new Date(Date.now() + this.retryBaseDelayMs * 2 ** (attempt - 1))
+        attempt < emailJob.maxAttempts
+          ? new Date(Date.now() + retryBaseDelayMs * 2 ** (attempt - 1))
           : null;
 
-      await this.updateJob(emailJob, attempt < this.maxAttempts ? 'retry_scheduled' : 'failed', {
+      await this.updateJob(emailJob, attempt < emailJob.maxAttempts ? 'retry_scheduled' : 'failed', {
         attemptsMade: attempt,
         nextRunAt,
         lastError: errorMessage,
@@ -115,37 +112,39 @@ export class EmailJobRunnerService {
 
       await this.appendHistory(
         emailJob,
-        attempt < this.maxAttempts ? 'retry_scheduled' : 'failed',
-        attempt < this.maxAttempts
+        attempt < emailJob.maxAttempts ? 'retry_scheduled' : 'failed',
+        attempt < emailJob.maxAttempts
           ? 'job.processing.retry_scheduled'
           : 'job.processing.failed',
         attempt,
-        attempt < this.maxAttempts
+        attempt < emailJob.maxAttempts
           ? `Attempt ${attempt} failed. Next retry scheduled at ${nextRunAt?.toISOString()}`
           : `Job failed permanently after ${attempt} attempts`,
         {
           error: errorMessage,
+          retryBaseDelayMs,
         },
       );
 
       await this.auditLogService.record({
         tenantId: emailJob.tenantId,
         userId: emailJob.createdByUserId,
-        level: attempt < this.maxAttempts ? 'warn' : 'error',
+        level: attempt < emailJob.maxAttempts ? 'warn' : 'error',
         event:
-          attempt < this.maxAttempts
+          attempt < emailJob.maxAttempts
             ? 'job.processing.retry_scheduled'
             : 'job.processing.failed',
         resourceType: 'email_job',
         resourceId: emailJob.id,
         message:
-          attempt < this.maxAttempts
+          attempt < emailJob.maxAttempts
             ? `Email job ${emailJob.id} scheduled for retry`
             : `Email job ${emailJob.id} failed permanently`,
         metadata: {
           attempt,
           error: errorMessage,
           nextRunAt: nextRunAt?.toISOString() ?? null,
+          retryBaseDelayMs,
         },
       });
 
@@ -193,7 +192,15 @@ export class EmailJobRunnerService {
   ): Promise<void> {
     const metadata = job.metadataJson
       ? (JSON.parse(job.metadataJson) as {
-          simulate?: { failAttempts?: number; processingDelayMs?: number };
+          simulate?: {
+            failAttempts?: number;
+            processingDelayMs?: number;
+            maxAttempts?: number;
+            retryBaseDelayMs?: number;
+          } | null;
+          queue?: {
+            retryBaseDelayMs?: number;
+          };
         })
       : undefined;
     const failAttempts = metadata?.simulate?.failAttempts ?? 0;
@@ -206,6 +213,18 @@ export class EmailJobRunnerService {
     if (attempt <= failAttempts) {
       throw new Error(`Simulated email provider failure on attempt ${attempt}`);
     }
+  }
+
+  private resolveRetryBaseDelayMs(job: EmailJobEntity): number {
+    if (!job.metadataJson) {
+      return this.retryBaseDelayMs;
+    }
+
+    const metadata = JSON.parse(job.metadataJson) as {
+      queue?: { retryBaseDelayMs?: number };
+    };
+
+    return metadata.queue?.retryBaseDelayMs ?? this.retryBaseDelayMs;
   }
 
   private readPositiveInteger(rawValue: string | undefined, fallback: number): number {
