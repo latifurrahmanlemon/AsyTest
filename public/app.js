@@ -957,6 +957,26 @@ function renderJobDetails(job, logs) {
       metadata: entry.metadata ?? null,
     }))
     : [];
+  const logMarkup = logRows.length
+    ? logRows
+      .map(
+        (entry) => `
+          <article class="job-log-item">
+            <div class="job-log-item__head">
+              <strong>${escapeHtml(entry.event || 'event')}</strong>
+              <span>${escapeHtml(formatDate(entry.createdAt))}</span>
+            </div>
+            <p class="job-log-item__message">${escapeHtml(entry.message || '-')}</p>
+            ${
+  entry.metadata
+    ? `<p class="job-log-item__meta">${escapeHtml(formatMetadata(entry.metadata))}</p>`
+    : ''
+}
+          </article>
+        `,
+      )
+      .join('')
+    : '<div class="empty">No logs available for this job.</div>';
 
   elements.jobDetailSummary.textContent = `${job.id} • ${formatDate(job.createdAt)}`;
   elements.jobDetailContent.innerHTML = `
@@ -978,7 +998,7 @@ function renderJobDetails(job, logs) {
     </div>
     <div class="field">
       <span>Error / Audit Logs</span>
-      <pre class="job-detail-pre">${escapeHtml(formatJson(logRows))}</pre>
+      <div class="stack stack--compact">${logMarkup}</div>
     </div>
   `;
 }
@@ -1115,6 +1135,16 @@ function formatJson(value) {
   } catch {
     return String(value);
   }
+}
+
+function formatMetadata(metadata) {
+  if (!metadata || typeof metadata !== 'object') {
+    return '';
+  }
+
+  return Object.entries(metadata)
+    .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : formatJson(value)}`)
+    .join(' | ');
 }
 
 function setMessage(element, message, type) {

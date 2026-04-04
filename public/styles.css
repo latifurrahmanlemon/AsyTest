@@ -736,6 +736,56 @@ textarea {
   word-break: break-word;
 }
 
+.job-log-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 11px 12px;
+}
+
+.job-log-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.job-log-item__head strong {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.job-log-item__head span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.job-log-item__message {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.job-log-item__meta {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+#job-detail-modal .panel {
+  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+}
+
+#job-detail-content {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .hidden {
   display: none;
 }
