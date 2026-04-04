@@ -3,13 +3,14 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AuthController } from '../src/modules/auth/auth.controller';
 import { AuthService } from '../src/modules/auth/auth.service';
+import { UiController } from '../src/ui/ui.controller';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      controllers: [AuthController],
+      controllers: [AuthController, UiController],
       providers: [
         {
           provide: AuthService,
@@ -55,6 +56,13 @@ describe('AuthController (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('serves the root testing console UI', async () => {
+    const response = await request(app.getHttpServer()).get('/').expect(200);
+
+    expect(response.text).toContain('AsyTest Email Testing Console');
+    expect(response.text).toContain('Run Email Testing');
   });
 
   it('handles signup requests', async () => {

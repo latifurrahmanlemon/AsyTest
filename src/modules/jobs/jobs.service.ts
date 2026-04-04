@@ -162,6 +162,15 @@ export class JobsService {
     };
   }
 
+  async getJobLogs(currentUser: RequestUser, jobId: string) {
+    await this.getJobById(currentUser, jobId);
+
+    return this.auditLogService.listForTenant(currentUser.tenantId, {
+      resourceType: 'email_job',
+      resourceId: jobId,
+    });
+  }
+
   private async appendHistory(
     jobId: string,
     tenantId: string,

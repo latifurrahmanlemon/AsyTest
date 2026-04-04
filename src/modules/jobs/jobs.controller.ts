@@ -38,6 +38,14 @@ export class JobsController {
     return this.jobsService.listJobs(currentUser);
   }
 
+  @Get(':jobId/logs')
+  getJobLogs(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('jobId') jobId: string,
+  ) {
+    return this.jobsService.getJobLogs(currentUser, jobId);
+  }
+
   @Get(':jobId')
   getJobById(
     @CurrentUser() currentUser: RequestUser,

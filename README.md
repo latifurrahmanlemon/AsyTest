@@ -10,6 +10,7 @@ A production-minded NestJS backend with:
 - tenant-scoped user management
 - tenant-scoped SMTP configuration
 - persistent audit logs, email jobs, and job histories
+- a browser testing console with modal-based email testing
 
 ## Architecture
 
@@ -233,6 +234,19 @@ The seed is idempotent:
 
 ## Main API Endpoints
 
+### Browser console
+
+- `GET /`
+
+This serves the testing console UI with:
+
+- login/signup access screen
+- modal-based email testing
+- real delivery mode
+- simulated failure mode
+- job history table
+- actions for details, error details, and logs
+
 ### Public auth
 
 - `POST /auth/signup`
@@ -261,6 +275,7 @@ The seed is idempotent:
 - `POST /jobs/email`
 - `GET /jobs`
 - `GET /jobs/summary`
+- `GET /jobs/:jobId/logs`
 - `GET /jobs/:jobId`
 
 ## Example Flow
@@ -331,6 +346,36 @@ curl -X POST http://localhost:3000/jobs/email \
 curl http://localhost:3000/jobs \
   -H "Authorization: Bearer <token>"
 ```
+
+### 6. Read logs for one email job
+
+```bash
+curl http://localhost:3000/jobs/<job-id>/logs \
+  -H "Authorization: Bearer <token>"
+```
+
+## Browser Testing Console
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+From the UI you can:
+
+- log in as an existing user
+- sign up a new tenant account
+- open the `Run Email Testing` modal
+- choose `Real delivery test` or `Simulation failed test`
+- inspect the history table
+- open detail, error, and log views in modals
+
+The testing history table includes action buttons for:
+
+- `Details`
+- `Error`
+- `Logs`
 
 ## Forgot Password Flow
 

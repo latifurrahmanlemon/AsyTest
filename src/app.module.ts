@@ -9,6 +9,7 @@ import { ObservabilityModule } from './modules/observability/observability.modul
 import { RbacModule } from './modules/rbac/rbac.module';
 import { SmtpModule } from './modules/smtp/smtp.module';
 import { UsersModule } from './modules/users/users.module';
+import { UiModule } from './ui/ui.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UsersModule } from './modules/users/users.module';
     forwardRef(() => RbacModule),
     forwardRef(() => SmtpModule),
     forwardRef(() => JobsModule),
+    UiModule,
   ],
 })
 export class AppModule {}

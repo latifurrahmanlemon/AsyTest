@@ -7,7 +7,7 @@ import { TenantEntity } from '../src/database/entities/tenant.entity';
 import { UserEntity } from '../src/database/entities/user.entity';
 import { AuditLogService } from '../src/modules/observability/audit-log.service';
 import { CryptoService } from '../src/common/services/crypto.service';
-import { UserRole } from '../src/common/auth/role.enum';
+import { AuthMailerService } from '../src/modules/auth/auth-mailer.service';
 
 describe('AuthService', () => {
   let moduleRef: TestingModule;
@@ -34,6 +34,9 @@ describe('AuthService', () => {
   };
   const auditLogService = {
     record: jest.fn(),
+  };
+  const authMailerService = {
+    sendSignupOtp: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -63,6 +66,10 @@ describe('AuthService', () => {
           provide: AuditLogService,
           useValue: auditLogService,
         },
+        {
+          provide: AuthMailerService,
+          useValue: authMailerService,
+        },
       ],
     }).compile();
 
@@ -73,7 +80,9 @@ describe('AuthService', () => {
     await moduleRef.close();
   });
 
-  it('creates a tenant and initial admin during signup', async () => {
+  it('creates a tenant and returns signup verification state during signup', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
     tenantRepository.findOne.mockResolvedValue(null);
     userRepository.findOne.mockResolvedValue(null);
     tenantRepository.create.mockImplementation((payload: object) => ({
@@ -86,8 +95,6 @@ describe('AuthService', () => {
       ...payload,
     }));
     userRepository.save.mockImplementation(async (entity: object) => entity);
-    jwtService.signAsync.mockResolvedValue('signed-token');
-
     const result = await service.signup({
       tenantName: 'Acme',
       fullName: 'Alice Admin',
@@ -95,16 +102,18 @@ describe('AuthService', () => {
       password: 'very-secret',
     });
 
-    expect(result.accessToken).toBe('signed-token');
-    expect(result.user.role).toBe(UserRole.ADMIN);
-    expect(result.user.tenantName).toBe('Acme');
+    expect(result.requiresVerification).toBe(true);
+    expect(result.previewOtp).toBeDefined();
     expect(auditLogService.record).toHaveBeenCalledWith(
       expect.objectContaining({
-        event: 'auth.signup.completed',
+        event: 'auth.signup.pending_verification',
         tenantId: 'tenant-1',
         userId: 'user-1',
       }),
     );
+    expect(authMailerService.sendSignupOtp).toHaveBeenCalled();
+
+    process.env.NODE_ENV = previousNodeEnv;
   });
 
   it('returns a preview reset token outside production mode', async () => {
