@@ -775,6 +775,109 @@ textarea {
   word-break: break-word;
 }
 
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mode-card {
+  position: relative;
+  border: 1px solid rgba(41, 87, 63, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 252, 247, 0.9));
+  padding: 14px 14px 13px;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.mode-card.is-active {
+  border-color: rgba(47, 122, 78, 0.52);
+  box-shadow: 0 0 0 3px rgba(47, 122, 78, 0.14), 0 12px 22px rgba(27, 67, 43, 0.1);
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, rgba(250, 255, 251, 0.98), rgba(236, 248, 240, 0.95));
+}
+
+.mode-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-card b {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.mode-card small {
+  color: var(--muted);
+  line-height: 1.4;
+  font-size: 0.89rem;
+}
+
+.mode-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mode-card__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(86, 112, 98, 0.5);
+  background: #fff;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mode-card__dot::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mode-card.is-active .mode-card__dot {
+  border-color: rgba(47, 122, 78, 0.8);
+}
+
+.mode-card.is-active .mode-card__dot::after {
+  background: rgba(47, 122, 78, 0.95);
+}
+
+.sim-box {
+  border: 1px dashed rgba(41, 87, 63, 0.26);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#job-modal .panel {
+  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+}
+
+#job-modal .panel__header {
+  margin-bottom: 14px;
+}
+
+#job-modal #job-form {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 #job-detail-modal .panel {
   max-height: calc(100vh - 110px);
   display: flex;
@@ -837,6 +940,10 @@ textarea {
   }
 
   .job-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -71,6 +71,10 @@ const elements = {
   confirmCancelButton: document.getElementById('confirm-cancel-button'),
   confirmAcceptButton: document.getElementById('confirm-accept-button'),
   jobForm: document.getElementById('job-form'),
+  jobModeInputs: Array.from(document.querySelectorAll('input[name="jobMode"]')),
+  jobModeCardReal: document.getElementById('job-mode-card-real'),
+  jobModeCardSim: document.getElementById('job-mode-card-sim'),
+  jobSimulateFields: document.getElementById('job-simulate-fields'),
   jobMessage: document.getElementById('job-message'),
   smtpForm: document.getElementById('smtp-form'),
   smtpMessage: document.getElementById('smtp-message'),
@@ -120,6 +124,7 @@ function bindEvents() {
   elements.logoutButton.addEventListener('click', handleLogout);
   elements.refreshButton.addEventListener('click', () => hydrateDashboard());
   elements.jobForm.addEventListener('submit', handleCreateJob);
+  elements.jobModeInputs.forEach((input) => input.addEventListener('change', syncJobModeUi));
   elements.openJobModal.addEventListener('click', openJobModal);
   elements.closeJobModal.addEventListener('click', closeJobModal);
   elements.jobModalBackdrop.addEventListener('click', closeJobModal);
@@ -378,19 +383,34 @@ async function handleCreateJob(event) {
   setMessage(elements.jobMessage, 'Queueing email...');
 
   const formData = new FormData(elements.jobForm);
+  const mode = String(formData.get('jobMode') || 'real');
+  const maxAttempts = Number(formData.get('maxAttempts') || 3);
+  const retryBaseDelayMs = Number(formData.get('retryBaseDelayMs') || 1000);
   const payload = {
     to: String(formData.get('to') || '').trim(),
     subject: String(formData.get('subject') || '').trim(),
     body: String(formData.get('body') || '').trim(),
+    simulate: {
+      maxAttempts,
+      retryBaseDelayMs,
+    },
   };
+  if (mode === 'simulate-fail') {
+    payload.simulate.failAttempts = Number(formData.get('failAttempts') || 3);
+    payload.simulate.processingDelayMs = Number(formData.get('processingDelayMs') || 100);
+  }
 
   try {
     await api('/jobs/email', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    elements.jobForm.reset();
-    setMessage(elements.jobMessage, 'Email job queued.', 'success');
+    setMessage(
+      elements.jobMessage,
+      mode === 'simulate-fail' ? 'Simulator email test queued.' : 'Real email test queued.',
+      'success',
+    );
+    resetJobFormState();
     closeJobModal();
     await hydrateDashboard();
   } catch (error) {
@@ -399,6 +419,7 @@ async function handleCreateJob(event) {
 }
 
 function openJobModal() {
+  syncJobModeUi();
   elements.jobModal.classList.remove('hidden');
   elements.jobModal.setAttribute('aria-hidden', 'false');
 }
@@ -406,6 +427,27 @@ function openJobModal() {
 function closeJobModal() {
   elements.jobModal.classList.add('hidden');
   elements.jobModal.setAttribute('aria-hidden', 'true');
+}
+
+function syncJobModeUi() {
+  const selected = elements.jobForm.querySelector('input[name="jobMode"]:checked');
+  const mode = selected ? selected.value : 'real';
+  elements.jobModeCardReal.classList.toggle('is-active', mode === 'real');
+  elements.jobModeCardSim.classList.toggle('is-active', mode === 'simulate-fail');
+  elements.jobSimulateFields.classList.toggle('hidden', mode !== 'simulate-fail');
+}
+
+function resetJobFormState() {
+  elements.jobForm.reset();
+  const defaultMode = elements.jobForm.querySelector('input[name="jobMode"][value="real"]');
+  if (defaultMode) {
+    defaultMode.checked = true;
+  }
+  elements.jobForm.maxAttempts.value = '3';
+  elements.jobForm.retryBaseDelayMs.value = '1000';
+  elements.jobForm.failAttempts.value = '3';
+  elements.jobForm.processingDelayMs.value = '100';
+  syncJobModeUi();
 }
 
 function openJobDetailModal() {
