@@ -56,7 +56,6 @@ const elements = {
   userForm: document.getElementById('user-form'),
   userFormMode: document.getElementById('user-form-mode'),
   userFormUserId: document.getElementById('user-form-user-id'),
-  userFormHelper: document.getElementById('user-form-helper'),
   saveUserButton: document.getElementById('save-user-button'),
   userPasswordInput: document.getElementById('user-password-input'),
   userModalTitle: document.getElementById('user-modal-title'),
@@ -475,7 +474,6 @@ function setUserModalMode(mode, user) {
   elements.userFormMode.value = mode;
   elements.userFormUserId.value = user?.id || '';
   elements.userModalTitle.textContent = mode === 'edit' ? 'Edit User' : 'Add New User';
-  elements.userFormHelper.textContent = mode === 'edit' ? 'Update User' : 'Create User';
   elements.saveUserButton.textContent = mode === 'edit' ? 'Update User' : 'Save User';
   elements.userPasswordInput.required = mode !== 'edit';
   elements.userPasswordInput.placeholder =

@@ -142,7 +142,21 @@
               type="button"
               data-section="dashboard"
             >
-              Dashboard
+              <span class="nav-tab__content">
+                <svg
+                  class="nav-tab__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="2" />
+                  <rect x="13" y="3" width="8" height="5" rx="2" stroke="currentColor" stroke-width="2" />
+                  <rect x="13" y="10" width="8" height="11" rx="2" stroke="currentColor" stroke-width="2" />
+                  <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <span>Dashboard</span>
+              </span>
             </button>
             <button
               id="nav-users"
@@ -150,7 +164,21 @@
               type="button"
               data-section="users"
             >
-              User Management
+              <span class="nav-tab__content">
+                <svg
+                  class="nav-tab__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="2" />
+                  <path d="M3 19C3 15.6863 5.68629 13 9 13C12.3137 13 15 15.6863 15 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                  <circle cx="17.5" cy="9" r="2.5" stroke="currentColor" stroke-width="2" />
+                  <path d="M15.5 19C15.5 16.7909 17.2909 15 19.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span>User Management</span>
+              </span>
             </button>
             <button
               id="nav-settings"
@@ -158,7 +186,24 @@
               type="button"
               data-section="settings"
             >
-              Settings
+              <span class="nav-tab__content">
+                <svg
+                  class="nav-tab__icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                  <path
+                    d="M19.4 15A7.9 7.9 0 0 0 19.5 13.5L21 12L19.5 10.5A7.9 7.9 0 0 0 19.4 9L17.5 8.2L16.8 6.3A7.9 7.9 0 0 0 15 5.6L13.5 4H10.5L9 5.6A7.9 7.9 0 0 0 7.2 6.3L6.5 8.2L4.6 9A7.9 7.9 0 0 0 4.5 10.5L3 12L4.5 13.5A7.9 7.9 0 0 0 4.6 15L6.5 15.8L7.2 17.7A7.9 7.9 0 0 0 9 18.4L10.5 20H13.5L15 18.4A7.9 7.9 0 0 0 16.8 17.7L17.5 15.8L19.4 15Z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <span>Settings</span>
+              </span>
             </button>
           </nav>
           <div class="dashboard__actions">
@@ -321,8 +366,13 @@
                 Create a new tenant user or edit an existing user without leaving the directory view.
               </p>
             </div>
-            <button id="close-user-modal" class="button button--ghost" type="button">
-              Close
+            <button
+              id="close-user-modal"
+              class="button modal-close-icon"
+              type="button"
+              aria-label="Close modal"
+            >
+              <span aria-hidden="true">&times;</span>
             </button>
           </div>
 
@@ -367,7 +417,6 @@
             </label>
             <div class="split split--actions">
               <div class="field field--actions">
-                <span id="user-form-helper">Create User</span>
                 <button id="save-user-button" class="button button--primary" type="submit">
                   Save User
                 </button>
@@ -417,8 +466,13 @@
                 Submit a test email to verify queue processing and SMTP delivery behavior.
               </p>
             </div>
-            <button id="close-job-modal" class="button button--ghost" type="button">
-              Close
+            <button
+              id="close-job-modal"
+              class="button modal-close-icon"
+              type="button"
+              aria-label="Close modal"
+            >
+              <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <form id="job-form" class="stack">
