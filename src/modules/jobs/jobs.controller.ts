@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -52,5 +53,14 @@ export class JobsController {
     @Param('jobId') jobId: string,
   ) {
     return this.jobsService.getJobById(currentUser, jobId);
+  }
+
+  @Delete(':jobId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteJob(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('jobId') jobId: string,
+  ) {
+    await this.jobsService.deleteJob(currentUser, jobId);
   }
 }

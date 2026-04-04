@@ -557,9 +557,11 @@ textarea {
 .data-table--jobs th:nth-child(1),
 .data-table--jobs th:nth-child(2),
 .data-table--jobs th:nth-child(6),
+.data-table--jobs th:nth-child(7),
 .data-table--jobs td:nth-child(1),
 .data-table--jobs td:nth-child(2),
-.data-table--jobs td:nth-child(6) {
+.data-table--jobs td:nth-child(6),
+.data-table--jobs td:nth-child(7) {
   text-align: left;
 }
 
@@ -699,6 +701,41 @@ textarea {
   background: rgba(255, 255, 255, 0.38);
 }
 
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.job-detail-item {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.job-detail-item strong {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.job-detail-pre {
+  margin: 0;
+  border: 1px solid rgba(41, 87, 63, 0.14);
+  border-radius: 14px;
+  background: rgba(19, 45, 33, 0.94);
+  color: #edfff3;
+  padding: 12px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .hidden {
   display: none;
 }
@@ -747,5 +784,9 @@ textarea {
 
   h1 {
     white-space: normal;
+  }
+
+  .job-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

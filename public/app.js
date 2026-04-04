@@ -44,6 +44,11 @@ const elements = {
   closeJobModal: document.getElementById('close-job-modal'),
   jobModal: document.getElementById('job-modal'),
   jobModalBackdrop: document.getElementById('job-modal-backdrop'),
+  jobDetailModal: document.getElementById('job-detail-modal'),
+  jobDetailModalBackdrop: document.getElementById('job-detail-modal-backdrop'),
+  closeJobDetailModal: document.getElementById('close-job-detail-modal'),
+  jobDetailSummary: document.getElementById('job-detail-summary'),
+  jobDetailContent: document.getElementById('job-detail-content'),
   usersList: document.getElementById('users-list'),
   usersSearch: document.getElementById('users-search'),
   usersSort: document.getElementById('users-sort'),
@@ -118,6 +123,9 @@ function bindEvents() {
   elements.openJobModal.addEventListener('click', openJobModal);
   elements.closeJobModal.addEventListener('click', closeJobModal);
   elements.jobModalBackdrop.addEventListener('click', closeJobModal);
+  elements.jobsList.addEventListener('click', handleJobsTableClick);
+  elements.closeJobDetailModal.addEventListener('click', closeJobDetailModal);
+  elements.jobDetailModalBackdrop.addEventListener('click', closeJobDetailModal);
   elements.userForm.addEventListener('submit', handleCreateUser);
   elements.openUserModal.addEventListener('click', openUserModal);
   elements.closeUserModal.addEventListener('click', closeUserModal);
@@ -400,6 +408,18 @@ function closeJobModal() {
   elements.jobModal.setAttribute('aria-hidden', 'true');
 }
 
+function openJobDetailModal() {
+  elements.jobDetailModal.classList.remove('hidden');
+  elements.jobDetailModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeJobDetailModal() {
+  elements.jobDetailModal.classList.add('hidden');
+  elements.jobDetailModal.setAttribute('aria-hidden', 'true');
+  elements.jobDetailSummary.textContent = '';
+  elements.jobDetailContent.innerHTML = '';
+}
+
 async function handleCreateUser(event) {
   event.preventDefault();
   const mode = elements.userFormMode.value;
@@ -503,6 +523,13 @@ function handleEscape(event) {
     closeJobModal();
   }
 
+  if (
+    event.key === 'Escape' &&
+    !elements.jobDetailModal.classList.contains('hidden')
+  ) {
+    closeJobDetailModal();
+  }
+
   if (event.key === 'Escape' && !elements.userModal.classList.contains('hidden')) {
     closeUserModal();
   }
@@ -596,6 +623,44 @@ async function handleUsersTableClick(event) {
     await refreshUsers();
   } catch (error) {
     setMessage(elements.userMessage, error.message, 'error');
+  } finally {
+    actionButton.disabled = false;
+  }
+}
+
+async function handleJobsTableClick(event) {
+  const actionButton = event.target.closest('[data-job-action]');
+  if (!actionButton) {
+    return;
+  }
+
+  const jobId = actionButton.dataset.jobId;
+  const action = actionButton.dataset.jobAction;
+  if (!jobId || !action) {
+    return;
+  }
+
+  actionButton.disabled = true;
+
+  try {
+    if (action === 'delete-job') {
+      if (!(await confirmAction('Do you want to permanently delete this email job?'))) {
+        return;
+      }
+
+      await api(`/jobs/${jobId}`, { method: 'DELETE' });
+      setMessage(elements.jobMessage, 'Email job deleted.', 'success');
+      await hydrateDashboard();
+      return;
+    }
+
+    if (action === 'view-job') {
+      const [job, logs] = await Promise.all([api(`/jobs/${jobId}`), api(`/jobs/${jobId}/logs`)]);
+      renderJobDetails(job, logs);
+      openJobDetailModal();
+    }
+  } catch (error) {
+    setMessage(elements.jobMessage, error.message, 'error');
   } finally {
     actionButton.disabled = false;
   }
@@ -709,7 +774,31 @@ function renderJobs(jobs) {
             <td><span class="pill">${escapeHtml(job.status)}</span></td>
             <td>${escapeHtml(`${job.attemptsMade}/${job.maxAttempts}`)}</td>
             <td>${escapeHtml(formatDate(job.createdAt))}</td>
-            <td>${escapeHtml(job.lastError || '-')}</td>
+            <td>${escapeHtml(formatMiddleTruncated(job.lastError, 10, 10))}</td>
+            <td>
+              <div class="table-actions">
+                <button
+                  class="button button--small button--ghost icon-action"
+                  type="button"
+                  data-job-action="view-job"
+                  data-job-id="${escapeHtml(job.id)}"
+                  data-tooltip="View details"
+                  aria-label="View details"
+                >
+                  &#128065;
+                </button>
+                <button
+                  class="button button--small button--danger-soft icon-action"
+                  type="button"
+                  data-job-action="delete-job"
+                  data-job-id="${escapeHtml(job.id)}"
+                  data-tooltip="Delete job"
+                  aria-label="Delete job"
+                >
+                  &#128465;
+                </button>
+              </div>
+            </td>
           </tr>
         `,
       `
@@ -722,6 +811,7 @@ function renderJobs(jobs) {
               <th>Attempts</th>
               <th>Created At</th>
               <th>Last Error</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -858,6 +948,41 @@ function renderUsers() {
   elements.usersPagination.innerHTML = buildPagination(totalPages);
 }
 
+function renderJobDetails(job, logs) {
+  const logRows = Array.isArray(logs)
+    ? logs.map((entry) => ({
+      createdAt: entry.createdAt,
+      event: entry.event,
+      message: entry.message,
+      metadata: entry.metadata ?? null,
+    }))
+    : [];
+
+  elements.jobDetailSummary.textContent = `${job.id} • ${formatDate(job.createdAt)}`;
+  elements.jobDetailContent.innerHTML = `
+    <div class="job-detail-grid">
+      <div class="job-detail-item"><strong>To</strong>${escapeHtml(job.toEmail)}</div>
+      <div class="job-detail-item"><strong>Subject</strong>${escapeHtml(job.subject)}</div>
+      <div class="job-detail-item"><strong>Status</strong>${escapeHtml(job.status)}</div>
+      <div class="job-detail-item"><strong>Attempts</strong>${escapeHtml(`${job.attemptsMade}/${job.maxAttempts}`)}</div>
+      <div class="job-detail-item"><strong>Created</strong>${escapeHtml(formatDate(job.createdAt))}</div>
+      <div class="job-detail-item"><strong>Updated</strong>${escapeHtml(formatDate(job.updatedAt))}</div>
+    </div>
+    <div class="field">
+      <span>Body</span>
+      <pre class="job-detail-pre">${escapeHtml(job.body || '-')}</pre>
+    </div>
+    <div class="field">
+      <span>Last Error</span>
+      <pre class="job-detail-pre">${escapeHtml(job.lastError || 'No error')}</pre>
+    </div>
+    <div class="field">
+      <span>Error / Audit Logs</span>
+      <pre class="job-detail-pre">${escapeHtml(formatJson(logRows))}</pre>
+    </div>
+  `;
+}
+
 function buildPagination(totalPages) {
   if (totalPages <= 1) {
     return '';
@@ -972,6 +1097,23 @@ function formatDate(value) {
     return new Date(value).toLocaleString();
   } catch {
     return value;
+  }
+}
+
+function formatMiddleTruncated(value, headLength, tailLength) {
+  const text = String(value || '-');
+  const keep = headLength + tailLength;
+  if (text.length <= keep) {
+    return text;
+  }
+  return `${text.slice(0, headLength)}...${text.slice(-tailLength)}`;
+}
+
+function formatJson(value) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
   }
 }
 

@@ -178,6 +178,41 @@ export class JobsService {
     });
   }
 
+  async deleteJob(currentUser: RequestUser, jobId: string): Promise<void> {
+    const job = await this.emailJobRepository.findOne({
+      where: { id: jobId, tenantId: currentUser.tenantId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Email job was not found');
+    }
+
+    if (
+      currentUser.role !== UserRole.ADMIN &&
+      job.createdByUserId !== currentUser.userId
+    ) {
+      throw new ForbiddenException('You cannot delete another user’s job');
+    }
+
+    await this.jobQueueService.removeEmailJob(job.id).catch(() => undefined);
+    await this.emailJobRepository.delete({ id: job.id, tenantId: currentUser.tenantId });
+
+    await this.auditLogService.record({
+      tenantId: currentUser.tenantId,
+      userId: currentUser.userId,
+      level: 'info',
+      event: 'job.deleted',
+      resourceType: 'email_job',
+      resourceId: job.id,
+      message: `Email job ${job.id} deleted`,
+      metadata: {
+        toEmail: job.toEmail,
+        subject: job.subject,
+        status: job.status,
+      },
+    });
+  }
+
   private async appendHistory(
     jobId: string,
     tenantId: string,

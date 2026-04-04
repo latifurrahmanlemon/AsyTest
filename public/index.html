@@ -496,6 +496,35 @@
       </div>
     </div>
 
+    <div id="job-detail-modal" class="modal hidden" aria-hidden="true">
+      <div id="job-detail-modal-backdrop" class="modal__backdrop"></div>
+      <div
+        class="modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="job-detail-modal-title"
+      >
+        <div class="panel">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="eyebrow">Email Job</p>
+              <h3 id="job-detail-modal-title">Job Details</h3>
+              <p id="job-detail-summary" class="section-note"></p>
+            </div>
+            <button
+              id="close-job-detail-modal"
+              class="button modal-close-icon"
+              type="button"
+              aria-label="Close modal"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div id="job-detail-content" class="stack stack--compact"></div>
+        </div>
+      </div>
+    </div>
+
     <script src="/app.js"></script>
   </body>
   </html>

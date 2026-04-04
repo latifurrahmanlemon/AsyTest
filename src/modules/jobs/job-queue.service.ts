@@ -21,6 +21,10 @@ export class JobQueueService implements OnModuleDestroy {
     await this.queue.add('send-email', payload, options);
   }
 
+  async removeEmailJob(jobId: string): Promise<void> {
+    await this.queue.remove(jobId);
+  }
+
   getQueueName(): string {
     return this.queueName;
   }
