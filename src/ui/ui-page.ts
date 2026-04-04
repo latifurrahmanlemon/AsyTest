@@ -25,11 +25,18 @@ export const uiPage = String.raw`<!doctype html>
     .toast{padding:12px 14px;border-radius:12px;margin-bottom:12px}.toast.ok{background:#ecfdf5;color:#166534}.toast.err{background:#fef2f2;color:#b91c1c}
     table{width:100%;border-collapse:collapse}th,td{padding:11px 10px;border-bottom:1px solid #e9eef5;text-align:left;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
     .actions{display:flex;gap:8px;flex-wrap:wrap}.small{padding:8px 10px;border-radius:10px;font-size:12px}.mono{font-family:Consolas,monospace;word-break:break-word}
+    .actionCol{min-width:260px}
     .statusline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .modalWrap{position:fixed;inset:0;background:rgba(15,23,42,.56);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
     .modal{width:min(900px,100%);max-height:90vh;overflow:auto;padding:20px;border-radius:20px;background:#fff;box-shadow:var(--shadow)}
     .modalHead{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
     .card{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fbfdff}
+    .modeGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
+    .modeCard{border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:14px;cursor:pointer}
+    .modeCard.active{border-color:var(--brand);box-shadow:0 0 0 3px rgba(31,111,235,.12)}
+    .modeCard input{margin-right:8px}
+    .modeCard b{display:block;margin-bottom:6px}
+    .actionHint{padding:10px 12px;background:#f8fbff;border:1px solid #dbe7ff;border-radius:12px;color:#31518d;margin-bottom:12px}
     .timeline{display:grid;gap:10px}.timeline .card{border-left:4px solid #bfdbfe}
     .kv{display:grid;grid-template-columns:180px 1fr;gap:8px 12px}.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px}
     .authGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -114,10 +121,11 @@ export const uiPage = String.raw`<!doctype html>
             <div class="row" style="justify-content:space-between;align-items:center">
               <div>
                 <h2>Testing Email History</h2>
-                <p class="sub">Each row has actions for full details, error details, and job logs.</p>
+                <p class="sub">Each row has visible action buttons for full details, error details, and job logs.</p>
               </div>
             </div>
             <div id="historyToast" class="hidden"></div>
+            <div class="actionHint"><b>Row Actions:</b> Details opens the full job modal, Error Details opens failure and retry information, and Logs shows job-specific logs.</div>
             <div id="historyWrap">
               <div class="empty">No testing history yet.</div>
             </div>
@@ -172,10 +180,18 @@ export const uiPage = String.raw`<!doctype html>
         <div class="field"><label>Body</label><textarea name="body" required></textarea></div>
         <div class="field">
           <label>Testing Mode</label>
-          <select name="mode" id="runMode">
-            <option value="real">Real delivery test</option>
-            <option value="simulate-fail">Simulation failed test</option>
-          </select>
+          <div class="modeGrid">
+            <label class="modeCard active" id="modeCardReal">
+              <input type="radio" name="mode" value="real" checked />
+              <b>Real Delivery Test</b>
+              <span>Uses the current SMTP configuration and tries to deliver a real email.</span>
+            </label>
+            <label class="modeCard" id="modeCardSimulate">
+              <input type="radio" name="mode" value="simulate-fail" />
+              <b>Simulation Failed Test</b>
+              <span>Forces retry/failure behavior so you can verify logs, errors, and history easily.</span>
+            </label>
+          </div>
         </div>
         <div id="simulateFields" class="three hidden">
           <div class="field"><label>Fail Attempts</label><input name="failAttempts" type="number" min="1" max="10" value="3" /></div>
@@ -206,7 +222,7 @@ export const uiPage = String.raw`<!doctype html>
   <script>
     const state={token:localStorage.getItem('asytest_token')||'',profile:null,jobs:[],summary:null,smtp:null};
     const $=id=>document.getElementById(id);
-    const els={authPanel:$('authPanel'),appPanel:$('appPanel'),authToast:$('authToast'),historyToast:$('historyToast'),runToast:$('runToast'),signupForm:$('signupForm'),verifyForm:$('verifyForm'),loginForm:$('loginForm'),smtpForm:$('smtpForm'),smtpReadonly:$('smtpReadonly'),smtpSummary:$('smtpSummary'),openRunModalBtn:$('openRunModalBtn'),runModalWrap:$('runModalWrap'),runForm:$('runForm'),runMode:$('runMode'),simulateFields:$('simulateFields'),historyWrap:$('historyWrap'),detailModalWrap:$('detailModalWrap'),detailTitle:$('detailTitle'),detailSubtitle:$('detailSubtitle'),detailBody:$('detailBody'),sessionLoggedOut:$('sessionLoggedOut'),sessionLoggedIn:$('sessionLoggedIn'),sessionName:$('sessionName'),sessionMeta:$('sessionMeta'),refreshAllBtn:$('refreshAllBtn'),logoutBtn:$('logoutBtn'),testSmtpBtn:$('testSmtpBtn')};
+    const els={authPanel:$('authPanel'),appPanel:$('appPanel'),authToast:$('authToast'),historyToast:$('historyToast'),runToast:$('runToast'),signupForm:$('signupForm'),verifyForm:$('verifyForm'),loginForm:$('loginForm'),smtpForm:$('smtpForm'),smtpReadonly:$('smtpReadonly'),smtpSummary:$('smtpSummary'),openRunModalBtn:$('openRunModalBtn'),runModalWrap:$('runModalWrap'),runForm:$('runForm'),simulateFields:$('simulateFields'),historyWrap:$('historyWrap'),detailModalWrap:$('detailModalWrap'),detailTitle:$('detailTitle'),detailSubtitle:$('detailSubtitle'),detailBody:$('detailBody'),sessionLoggedOut:$('sessionLoggedOut'),sessionLoggedIn:$('sessionLoggedIn'),sessionName:$('sessionName'),sessionMeta:$('sessionMeta'),refreshAllBtn:$('refreshAllBtn'),logoutBtn:$('logoutBtn'),testSmtpBtn:$('testSmtpBtn'),modeCardReal:$('modeCardReal'),modeCardSimulate:$('modeCardSimulate')};
     const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
     const fmt=v=>v?new Date(v).toLocaleString():'N/A';
     const badge=s=>'<span class="badge '+esc(s)+'">'+esc(String(s).replaceAll('_',' '))+'</span>';
@@ -216,7 +232,9 @@ export const uiPage = String.raw`<!doctype html>
     function setSummary(){const s=state.summary||{total:0,queued:0,processing:0,retryScheduled:0,succeeded:0,failed:0};$('statTotal').textContent=s.total;$('statQueued').textContent=s.queued;$('statProcessing').textContent=s.processing;$('statRetry').textContent=s.retryScheduled;$('statSucceeded').textContent=s.succeeded;$('statFailed').textContent=s.failed;}
     function renderSmtp(){const s=state.smtp;if(!state.profile)return;const admin=state.profile.role==='admin';els.smtpForm.classList.toggle('hidden',!admin);els.smtpReadonly.classList.toggle('hidden',admin);els.smtpReadonly.innerHTML='<div><b>SMTP configuration is managed by an admin.</b><p class="sub" style="margin:8px 0 0">You can still run real delivery tests if SMTP has already been configured.</p></div>';els.smtpSummary.innerHTML=s&&s.host?'<div class="kv"><b>Host</b><span>'+esc(s.host)+'</span><b>Port</b><span>'+esc(s.port)+'</span><b>Secure</b><span>'+esc(s.secure?'Yes':'No')+'</span><b>From</b><span>'+esc(s.fromEmail||'-')+'</span><b>Username</b><span>'+esc(s.username||'-')+'</span><b>Password Stored</b><span>'+(s.hasPassword?'Yes':'No')+'</span><b>Updated</b><span>'+esc(fmt(s.updatedAt))+'</span></div>':'<div class="empty">No SMTP configuration saved for this tenant yet.</div>';if(admin&&s&&s.host){els.smtpForm.host.value=s.host||'';els.smtpForm.port.value=s.port||'';els.smtpForm.username.value=s.username||'';els.smtpForm.password.value='';els.smtpForm.fromEmail.value=s.fromEmail||'';els.smtpForm.fromName.value=s.fromName||'';$('smtpSecure').checked=!!s.secure;}}
     function modeLabel(job){return job.metadata&&job.metadata.simulate&&job.metadata.simulate.failAttempts?'Simulated failure':'Real delivery';}
-    function renderHistory(){if(!state.jobs.length){els.historyWrap.innerHTML='<div class="empty">No testing history yet.</div>';return;}els.historyWrap.innerHTML='<table><thead><tr><th>Recipient</th><th>Subject</th><th>Mode</th><th>Status</th><th>Attempts</th><th>Created</th><th>Actions</th></tr></thead><tbody>'+state.jobs.map(job=>'<tr><td>'+esc(job.toEmail)+'</td><td>'+esc(job.subject)+'</td><td>'+esc(modeLabel(job))+'</td><td>'+badge(job.status)+'</td><td>'+esc(job.attemptsMade)+' / '+esc(job.maxAttempts)+'</td><td>'+esc(fmt(job.createdAt))+'</td><td><div class="actions"><button class="small ghost" data-action="details" data-id="'+job.id+'">Details</button><button class="small warn" data-action="error" data-id="'+job.id+'">Error</button><button class="small secondary" data-action="logs" data-id="'+job.id+'">Logs</button></div></td></tr>').join('')+'</tbody></table>';els.historyWrap.querySelectorAll('button[data-action]').forEach(btn=>btn.addEventListener('click',()=>handleHistoryAction(btn.dataset.action,btn.dataset.id)));}
+    function renderHistory(){if(!state.jobs.length){els.historyWrap.innerHTML='<div class="empty">No testing history yet.</div>';return;}els.historyWrap.innerHTML='<table><thead><tr><th>Recipient</th><th>Subject</th><th>Mode</th><th>Status</th><th>Attempts</th><th>Created</th><th class="actionCol">Actions</th></tr></thead><tbody>'+state.jobs.map(job=>'<tr><td>'+esc(job.toEmail)+'</td><td>'+esc(job.subject)+'</td><td>'+esc(modeLabel(job))+'</td><td>'+badge(job.status)+'</td><td>'+esc(job.attemptsMade)+' / '+esc(job.maxAttempts)+'</td><td>'+esc(fmt(job.createdAt))+'</td><td class="actionCol"><div class="actions"><button class="small ghost" data-action="details" data-id="'+job.id+'">View Details</button><button class="small warn" data-action="error" data-id="'+job.id+'">Error Details</button><button class="small secondary" data-action="logs" data-id="'+job.id+'">View Logs</button></div></td></tr>').join('')+'</tbody></table>';els.historyWrap.querySelectorAll('button[data-action]').forEach(btn=>btn.addEventListener('click',()=>handleHistoryAction(btn.dataset.action,btn.dataset.id)));}
+    function currentRunMode(){const selected=document.querySelector('input[name="mode"]:checked');return selected?selected.value:'real';}
+    function syncModeUi(){const mode=currentRunMode();els.simulateFields.classList.toggle('hidden',mode!=='simulate-fail');els.modeCardReal.classList.toggle('active',mode==='real');els.modeCardSimulate.classList.toggle('active',mode==='simulate-fail');}
     function openModal(id){$(id).classList.remove('hidden');}
     function closeModal(id){$(id).classList.add('hidden');}
     function setDetail(title,subtitle,html){els.detailTitle.textContent=title;els.detailSubtitle.textContent=subtitle;els.detailBody.innerHTML=html;openModal('detailModalWrap');}
@@ -230,13 +248,13 @@ export const uiPage = String.raw`<!doctype html>
     els.loginForm.addEventListener('submit',async e=>{e.preventDefault();try{const result=await api('/auth/login',{method:'POST',body:JSON.stringify({email:els.loginForm.email.value,password:els.loginForm.password.value})});state.token=result.accessToken;localStorage.setItem('asytest_token',state.token);await refreshDashboard();}catch(error){showToast(els.authToast,error.message,'error');}});
     els.logoutBtn.addEventListener('click',()=>{state.token='';state.profile=null;state.jobs=[];state.summary=null;state.smtp=null;localStorage.removeItem('asytest_token');setAuthUi();renderHistory();});
     els.refreshAllBtn.addEventListener('click',()=>refreshDashboard().catch(error=>showToast(els.historyToast,error.message,'error')));
-    els.openRunModalBtn.addEventListener('click',()=>openModal('runModalWrap'));
-    els.runMode.addEventListener('change',()=>els.simulateFields.classList.toggle('hidden',els.runMode.value!=='simulate-fail'));
+    els.openRunModalBtn.addEventListener('click',()=>{syncModeUi();openModal('runModalWrap');});
+    document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',syncModeUi));
     document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',()=>closeModal(btn.dataset.closeModal)));
-    els.runForm.addEventListener('submit',async e=>{e.preventDefault();const payload={to:els.runForm.to.value,subject:els.runForm.subject.value,body:els.runForm.body.value};if(els.runMode.value==='simulate-fail'){payload.simulate={failAttempts:Number(els.runForm.failAttempts.value||3),processingDelayMs:Number(els.runForm.processingDelayMs.value||100)};}try{await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});showToast(els.historyToast,els.runMode.value==='simulate-fail'?'Simulation failure test queued.':'Real email test queued.','ok');closeModal('runModalWrap');els.runForm.reset();els.runMode.value='real';els.simulateFields.classList.add('hidden');await refreshDashboard();}catch(error){showToast(els.runToast,error.message,'error');}});
+    els.runForm.addEventListener('submit',async e=>{e.preventDefault();const mode=currentRunMode();const payload={to:els.runForm.to.value,subject:els.runForm.subject.value,body:els.runForm.body.value};if(mode==='simulate-fail'){payload.simulate={failAttempts:Number(els.runForm.failAttempts.value||3),processingDelayMs:Number(els.runForm.processingDelayMs.value||100)};}try{await api('/jobs/email',{method:'POST',body:JSON.stringify(payload)});showToast(els.historyToast,mode==='simulate-fail'?'Simulation failure test queued.':'Real email test queued.','ok');closeModal('runModalWrap');els.runForm.reset();document.querySelector('input[name="mode"][value="real"]').checked=true;syncModeUi();await refreshDashboard();}catch(error){showToast(els.runToast,error.message,'error');}});
     els.smtpForm.addEventListener('submit',async e=>{e.preventDefault();try{await api('/smtp-config',{method:'PUT',body:JSON.stringify({host:els.smtpForm.host.value,port:Number(els.smtpForm.port.value),username:els.smtpForm.username.value||undefined,password:els.smtpForm.password.value||undefined,fromEmail:els.smtpForm.fromEmail.value,fromName:els.smtpForm.fromName.value||undefined,secure:$('smtpSecure').checked})});showToast(els.historyToast,'SMTP updated successfully.','ok');await refreshDashboard();}catch(error){showToast(els.historyToast,error.message,'error');}});
     els.testSmtpBtn.addEventListener('click',async()=>{try{await api('/smtp-config/test',{method:'POST'});showToast(els.historyToast,'SMTP connection verified.','ok');}catch(error){showToast(els.historyToast,error.message,'error');}});
-    (async()=>{if(state.token){try{await refreshDashboard();}catch(error){localStorage.removeItem('asytest_token');state.token='';setAuthUi();}}else{setAuthUi();renderHistory();}})();
+    (async()=>{syncModeUi();if(state.token){try{await refreshDashboard();}catch(error){localStorage.removeItem('asytest_token');state.token='';setAuthUi();}}else{setAuthUi();renderHistory();}})();
     setInterval(()=>{if(state.token){refreshDashboard().catch(()=>{});}},5000);
   </script>
 </body>
