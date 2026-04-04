@@ -178,44 +178,22 @@
         >
           <div class="stats" id="stats"></div>
 
-          <div class="grid">
-            <section class="panel panel--accent">
-              <div class="panel__header">
-                <p class="eyebrow">Dashboard</p>
-                <h3>Email Testing</h3>
+          <section class="panel panel--wide">
+            <div class="panel__header panel__header--split">
+              <div>
+                <p class="eyebrow">Email Tests</p>
+                <h3>Existing Test Emails</h3>
                 <p class="section-note">
-                  Queue a test mail and monitor its delivery state from the job feed.
+                  Track queued and processed test emails with status, attempts, and error details.
                 </p>
               </div>
-              <form id="job-form" class="stack">
-                <label class="field">
-                  <span>To Email</span>
-                  <input name="to" type="email" required />
-                </label>
-                <label class="field">
-                  <span>Subject</span>
-                  <input name="subject" type="text" required />
-                </label>
-                <label class="field">
-                  <span>Body</span>
-                  <textarea name="body" rows="5" required></textarea>
-                </label>
-                <button class="button button--primary" type="submit">Send Test Email</button>
-                <p id="job-message" class="message" role="status"></p>
-              </form>
-            </section>
-
-            <section class="panel panel--wide">
-              <div class="panel__header">
-                <p class="eyebrow">Activity</p>
-                <h3>Recent Email Jobs</h3>
-                <p class="section-note">
-                  Latest jobs for this tenant with current queue status and timestamps.
-                </p>
-              </div>
-              <div id="jobs-list" class="list list--cards"></div>
-            </section>
-          </div>
+              <button id="open-job-modal" class="button button--primary" type="button">
+                New Test
+              </button>
+            </div>
+            <p id="job-message" class="message" role="status"></p>
+            <div id="jobs-list" class="table-wrap"></div>
+          </section>
         </section>
 
         <section
@@ -276,36 +254,48 @@
               </p>
             </div>
             <form id="smtp-form" class="stack">
-              <label class="field">
-                <span>Host</span>
-                <input name="host" type="text" required />
-              </label>
               <div class="split">
+                <label class="field">
+                  <span>Host</span>
+                  <input name="host" type="text" required />
+                </label>
                 <label class="field">
                   <span>Port</span>
                   <input name="port" type="number" min="1" required />
                 </label>
-                <label class="field field--check">
-                  <span>Secure</span>
-                  <input name="secure" type="checkbox" />
+              </div>
+              <div class="split">
+                <label class="field">
+                  <span>Username</span>
+                  <input name="username" type="text" />
+                </label>
+                <label class="field">
+                  <span>Password</span>
+                  <input name="password" type="password" />
                 </label>
               </div>
-              <label class="field">
-                <span>Username</span>
-                <input name="username" type="text" />
-              </label>
-              <label class="field">
-                <span>Password</span>
-                <input name="password" type="password" />
-              </label>
-              <label class="field">
-                <span>From Email</span>
-                <input name="fromEmail" type="email" required />
-              </label>
-              <label class="field">
-                <span>From Name</span>
-                <input name="fromName" type="text" />
-              </label>
+              <div class="split">
+                <label class="field">
+                  <span>From Email</span>
+                  <input name="fromEmail" type="email" required />
+                </label>
+                <label class="field">
+                  <span>From Name</span>
+                  <input name="fromName" type="text" />
+                </label>
+              </div>
+              <div class="split">
+                <div class="field field--actions field--placeholder">
+                  <span>&nbsp;</span>
+                </div>
+                <label class="field field--switch">
+                  <span>Secure Connection</span>
+                  <span class="toggle">
+                    <input name="secure" type="checkbox" />
+                    <span class="toggle__track"></span>
+                  </span>
+                </label>
+              </div>
               <div class="inline-actions">
                 <button class="button button--primary" type="submit">Save SMTP</button>
                 <button id="smtp-test-button" class="button button--ghost" type="button">
@@ -384,6 +374,69 @@
               </div>
             </div>
             <p id="user-message" class="message" role="status"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="modal hidden" aria-hidden="true">
+      <div id="confirm-modal-backdrop" class="modal__backdrop"></div>
+      <div
+        class="modal__dialog modal__dialog--small"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+      >
+        <div class="panel">
+          <div class="panel__header">
+            <p class="eyebrow">Confirmation</p>
+            <h3 id="confirm-modal-title">Please confirm</h3>
+            <p id="confirm-modal-message" class="section-note"></p>
+          </div>
+          <div class="modal__actions">
+            <button id="confirm-cancel-button" class="button button--ghost" type="button">
+              Cancel
+            </button>
+            <button id="confirm-accept-button" class="button button--danger" type="button">
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="job-modal" class="modal hidden" aria-hidden="true">
+      <div id="job-modal-backdrop" class="modal__backdrop"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="job-modal-title">
+        <div class="panel">
+          <div class="panel__header panel__header--split">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h3 id="job-modal-title">Run New Email Test</h3>
+              <p class="section-note">
+                Submit a test email to verify queue processing and SMTP delivery behavior.
+              </p>
+            </div>
+            <button id="close-job-modal" class="button button--ghost" type="button">
+              Close
+            </button>
+          </div>
+          <form id="job-form" class="stack">
+            <label class="field">
+              <span>To Email</span>
+              <input name="to" type="email" required />
+            </label>
+            <label class="field">
+              <span>Subject</span>
+              <input name="subject" type="text" required />
+            </label>
+            <label class="field">
+              <span>Body</span>
+              <textarea name="body" rows="5" required></textarea>
+            </label>
+            <div class="modal__actions">
+              <button class="button button--primary" type="submit">Send Test Email</button>
+            </div>
           </form>
         </div>
       </div>

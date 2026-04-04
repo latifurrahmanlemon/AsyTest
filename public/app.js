@@ -40,6 +40,10 @@ const elements = {
   welcomeSubtitle: document.getElementById('welcome-subtitle'),
   stats: document.getElementById('stats'),
   jobsList: document.getElementById('jobs-list'),
+  openJobModal: document.getElementById('open-job-modal'),
+  closeJobModal: document.getElementById('close-job-modal'),
+  jobModal: document.getElementById('job-modal'),
+  jobModalBackdrop: document.getElementById('job-modal-backdrop'),
   usersList: document.getElementById('users-list'),
   usersSearch: document.getElementById('users-search'),
   usersSort: document.getElementById('users-sort'),
@@ -57,6 +61,11 @@ const elements = {
   userPasswordInput: document.getElementById('user-password-input'),
   userModalTitle: document.getElementById('user-modal-title'),
   userMessage: document.getElementById('user-message'),
+  confirmModal: document.getElementById('confirm-modal'),
+  confirmModalBackdrop: document.getElementById('confirm-modal-backdrop'),
+  confirmModalMessage: document.getElementById('confirm-modal-message'),
+  confirmCancelButton: document.getElementById('confirm-cancel-button'),
+  confirmAcceptButton: document.getElementById('confirm-accept-button'),
   jobForm: document.getElementById('job-form'),
   jobMessage: document.getElementById('job-message'),
   smtpForm: document.getElementById('smtp-form'),
@@ -107,10 +116,15 @@ function bindEvents() {
   elements.logoutButton.addEventListener('click', handleLogout);
   elements.refreshButton.addEventListener('click', () => hydrateDashboard());
   elements.jobForm.addEventListener('submit', handleCreateJob);
+  elements.openJobModal.addEventListener('click', openJobModal);
+  elements.closeJobModal.addEventListener('click', closeJobModal);
+  elements.jobModalBackdrop.addEventListener('click', closeJobModal);
   elements.userForm.addEventListener('submit', handleCreateUser);
   elements.openUserModal.addEventListener('click', openUserModal);
   elements.closeUserModal.addEventListener('click', closeUserModal);
   elements.userModalBackdrop.addEventListener('click', closeUserModal);
+  elements.confirmModalBackdrop.addEventListener('click', () => closeConfirmModal(false));
+  elements.confirmCancelButton.addEventListener('click', () => closeConfirmModal(false));
   elements.usersSearch.addEventListener('input', handleUserSearch);
   elements.usersSort.addEventListener('change', handleUserSort);
   elements.usersList.addEventListener('click', handleUsersTableClick);
@@ -370,10 +384,21 @@ async function handleCreateJob(event) {
     });
     elements.jobForm.reset();
     setMessage(elements.jobMessage, 'Email job queued.', 'success');
+    closeJobModal();
     await hydrateDashboard();
   } catch (error) {
     setMessage(elements.jobMessage, error.message, 'error');
   }
+}
+
+function openJobModal() {
+  elements.jobModal.classList.remove('hidden');
+  elements.jobModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeJobModal() {
+  elements.jobModal.classList.add('hidden');
+  elements.jobModal.setAttribute('aria-hidden', 'true');
 }
 
 async function handleCreateUser(event) {
@@ -476,8 +501,16 @@ function closeUserModal() {
 }
 
 function handleEscape(event) {
+  if (event.key === 'Escape' && !elements.jobModal.classList.contains('hidden')) {
+    closeJobModal();
+  }
+
   if (event.key === 'Escape' && !elements.userModal.classList.contains('hidden')) {
     closeUserModal();
+  }
+
+  if (event.key === 'Escape' && !elements.confirmModal.classList.contains('hidden')) {
+    closeConfirmModal(false);
   }
 }
 
@@ -528,7 +561,7 @@ async function handleUsersTableClick(event) {
     if (action === 'toggle-status') {
       const isActive = actionButton.dataset.isActive === 'true';
       const label = isActive ? 'deactivate' : 'activate';
-      if (!window.confirm(`Do you want to ${label} this user?`)) {
+      if (!(await confirmAction(`Do you want to ${label} this user?`))) {
         return;
       }
       await api(`/users/${userId}/status`, {
@@ -539,7 +572,7 @@ async function handleUsersTableClick(event) {
 
     if (action === 'toggle-role') {
       const role = actionButton.dataset.role === 'admin' ? 'user' : 'admin';
-      if (!window.confirm(`Do you want to change this user role to ${role}?`)) {
+      if (!(await confirmAction(`Do you want to change this user role to ${role}?`))) {
         return;
       }
       await api(`/users/${userId}/role`, {
@@ -549,7 +582,7 @@ async function handleUsersTableClick(event) {
     }
 
     if (action === 'delete-user') {
-      if (!window.confirm('Do you want to permanently delete this user?')) {
+      if (!(await confirmAction('Do you want to permanently delete this user?'))) {
         return;
       }
       await api(`/users/${userId}`, {
@@ -662,29 +695,44 @@ function renderStats(summary) {
 
 function renderJobs(jobs) {
   if (!jobs.length) {
-    elements.jobsList.innerHTML = '<div class="empty">No email jobs yet.</div>';
+    elements.jobsList.innerHTML = '<div class="empty">No test emails found.</div>';
     return;
   }
 
   elements.jobsList.innerHTML = jobs
     .slice(0, 12)
-    .map(
-      (job) => `
-        <article class="card">
-          <div class="card__top">
-            <div>
-              <p class="card__title">${escapeHtml(job.subject)}</p>
-              <p class="card__meta">
-                To: ${escapeHtml(job.toEmail)}<br />
-                Created: ${escapeHtml(formatDate(job.createdAt))}
-              </p>
-            </div>
-            <span class="pill">${escapeHtml(job.status)}</span>
-          </div>
-        </article>
+    .reduce(
+      (html, job) =>
+        html +
+        `
+          <tr>
+            <td>${escapeHtml(job.toEmail)}</td>
+            <td>${escapeHtml(job.subject)}</td>
+            <td><span class="pill">${escapeHtml(job.status)}</span></td>
+            <td>${escapeHtml(`${job.attemptsMade}/${job.maxAttempts}`)}</td>
+            <td>${escapeHtml(formatDate(job.createdAt))}</td>
+            <td>${escapeHtml(job.lastError || '-')}</td>
+          </tr>
+        `,
+      `
+        <table class="data-table data-table--jobs">
+          <thead>
+            <tr>
+              <th>To Email</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Attempts</th>
+              <th>Created At</th>
+              <th>Last Error</th>
+            </tr>
+          </thead>
+          <tbody>
       `,
-    )
-    .join('');
+    ) +
+    `
+          </tbody>
+        </table>
+    `;
 }
 
 function renderUsers() {
@@ -745,38 +793,46 @@ function renderUsers() {
             <td>
               <div class="table-actions">
                 <button
-                  class="button button--small button--ghost"
+                  class="button button--small button--ghost icon-action"
                   type="button"
                   data-user-action="edit-user"
                   data-user-id="${escapeHtml(user.id)}"
+                  data-tooltip="Edit user"
+                  aria-label="Edit user"
                 >
-                  Edit
+                  &#9998;
                 </button>
                 <button
-                  class="button button--small button--ghost"
+                  class="button button--small button--ghost icon-action"
                   type="button"
                   data-user-action="toggle-role"
                   data-user-id="${escapeHtml(user.id)}"
                   data-role="${escapeHtml(user.role)}"
+                  data-tooltip="${escapeHtml(user.role === 'admin' ? 'Make user' : 'Make admin')}"
+                  aria-label="${escapeHtml(user.role === 'admin' ? 'Make user' : 'Make admin')}"
                 >
-                  ${escapeHtml(user.role === 'admin' ? 'Make User' : 'Make Admin')}
+                  &#8646;
                 </button>
                 <button
-                  class="button button--small ${user.isActive ? 'button--danger-soft' : 'button--ghost'}"
+                  class="button button--small ${user.isActive ? 'button--danger-soft' : 'button--ghost'} icon-action"
                   type="button"
                   data-user-action="toggle-status"
                   data-user-id="${escapeHtml(user.id)}"
                   data-is-active="${escapeHtml(String(user.isActive))}"
+                  data-tooltip="${escapeHtml(user.isActive ? 'Deactivate user' : 'Activate user')}"
+                  aria-label="${escapeHtml(user.isActive ? 'Deactivate user' : 'Activate user')}"
                 >
-                  ${escapeHtml(user.isActive ? 'Deactivate' : 'Activate')}
+                  ${user.isActive ? '&#9711;' : '&#10003;'}
                 </button>
                 <button
-                  class="button button--small button--danger-soft"
+                  class="button button--small button--danger-soft icon-action"
                   type="button"
                   data-user-action="delete-user"
                   data-user-id="${escapeHtml(user.id)}"
+                  data-tooltip="Delete user"
+                  aria-label="Delete user"
                 >
-                  Delete
+                  &#128465;
                 </button>
               </div>
             </td>
@@ -823,6 +879,31 @@ function buildPagination(totalPages) {
   }
 
   return html;
+}
+
+function confirmAction(message) {
+  return new Promise((resolve) => {
+    elements.confirmModalMessage.textContent = message;
+    elements.confirmModal.classList.remove('hidden');
+    elements.confirmModal.setAttribute('aria-hidden', 'false');
+
+    elements.confirmAcceptButton.onclick = () => closeConfirmModal(true, resolve);
+    elements.confirmCancelButton.onclick = () => closeConfirmModal(false, resolve);
+    elements.confirmModalBackdrop.onclick = () => closeConfirmModal(false, resolve);
+  });
+}
+
+function closeConfirmModal(result, resolver) {
+  elements.confirmModal.classList.add('hidden');
+  elements.confirmModal.setAttribute('aria-hidden', 'true');
+  elements.confirmModalMessage.textContent = '';
+  elements.confirmAcceptButton.onclick = null;
+  elements.confirmCancelButton.onclick = null;
+  elements.confirmModalBackdrop.onclick = null;
+
+  if (typeof resolver === 'function') {
+    resolver(result);
+  }
 }
 
 function fillSmtpForm(config) {
