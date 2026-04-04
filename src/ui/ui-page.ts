@@ -36,6 +36,8 @@ export const uiPage = String.raw`<!doctype html>
     .modeCard.active{border-color:var(--brand);box-shadow:0 0 0 3px rgba(31,111,235,.12)}
     .modeCard input{margin-right:8px}
     .modeCard b{display:block;margin-bottom:6px}
+    .simBox{padding:14px;border:1px solid #fed7aa;border-radius:14px;background:#fff7ed}
+    .simBox h3{margin:0 0 6px}
     .actionHint{padding:10px 12px;background:#f8fbff;border:1px solid #dbe7ff;border-radius:12px;color:#31518d;margin-bottom:12px}
     .timeline{display:grid;gap:10px}.timeline .card{border-left:4px solid #bfdbfe}
     .kv{display:grid;grid-template-columns:180px 1fr;gap:8px 12px}.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px}
@@ -103,7 +105,7 @@ export const uiPage = String.raw`<!doctype html>
             <h2 style="margin-bottom:6px;">Testing Overview</h2>
             <p class="sub" style="margin:0">The history table below supports detail, error, and log modals for each email job.</p>
           </div>
-          <button class="primary" id="openRunModalBtn" type="button">Run Email Testing</button>
+          <button class="primary" id="openRunModalBtn" type="button">Run New Email Test</button>
         </div>
         <div class="stats" style="margin-top:14px">
           <div class="stat"><span>Total</span><b id="statTotal">0</b></div>
@@ -166,7 +168,7 @@ export const uiPage = String.raw`<!doctype html>
     <div class="modal">
       <div class="modalHead">
         <div>
-          <h2 style="margin:0">Run Email Testing</h2>
+          <h2 style="margin:0">Run New Email Test</h2>
           <p class="sub" style="margin:6px 0 0">Choose between real delivery and simulated failure testing.</p>
         </div>
         <button class="ghost" type="button" data-close-modal="runModalWrap">Close</button>
@@ -193,10 +195,14 @@ export const uiPage = String.raw`<!doctype html>
             </label>
           </div>
         </div>
-        <div id="simulateFields" class="three hidden">
-          <div class="field"><label>Fail Attempts</label><input name="failAttempts" type="number" min="1" max="10" value="3" /></div>
-          <div class="field"><label>Processing Delay (ms)</label><input name="processingDelayMs" type="number" min="0" max="30000" value="100" /></div>
-          <div class="field"><label>Behavior</label><input value="Job will retry and likely fail based on attempts" disabled /></div>
+        <div id="simulateFields" class="simBox hidden">
+          <h3>Simulator Testing Options</h3>
+          <p class="sub" style="margin:0 0 12px">This section brings back the old simulation behavior from the earlier version of the project.</p>
+          <div class="three">
+            <div class="field"><label>Simulated Fail Attempts</label><input name="failAttempts" type="number" min="1" max="10" value="3" /></div>
+            <div class="field"><label>Processing Delay (ms)</label><input name="processingDelayMs" type="number" min="0" max="30000" value="100" /></div>
+            <div class="field"><label>Expected Behavior</label><input value="Queue retry and failure path will be triggered" disabled /></div>
+          </div>
         </div>
         <div class="row">
           <button class="primary" type="submit">Submit Test Job</button>

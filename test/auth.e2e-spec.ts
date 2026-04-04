@@ -62,7 +62,8 @@ describe('AuthController (e2e)', () => {
     const response = await request(app.getHttpServer()).get('/').expect(200);
 
     expect(response.text).toContain('AsyTest Email Testing Console');
-    expect(response.text).toContain('Run Email Testing');
+    expect(response.text).toContain('Run New Email Test');
+    expect(response.text).toContain('Simulator Testing Options');
   });
 
   it('handles signup requests', async () => {
